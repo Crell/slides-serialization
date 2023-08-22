@@ -1,4 +1,4 @@
-name: slide-deck
+name: slides-serialization
 recipe: lamp
 config:
   webroot: .
