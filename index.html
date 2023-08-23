@@ -96,7 +96,14 @@
     <section>
       <section>
         <h2>Plethora of Potential PHP Processes</h2>
+        <ul>
+          <li class="fragment"><code>__sleep</code>/<code>__wakeup</code> (The before times)</li>
+          <li class="fragment"><code>Serializable</code> (PHP 5.1, Deprecated in 8.1)</li>
+          <li class="fragment"><code>__serialize</code>/<code>__unserialize</code> (PHP 7.4)</li>
+          <li class="fragment"><code>var_export()</code>/<code>__set_state()</code></li>
+        </ul>
       </section>
+      <!--
       <section>
         <h3><code>__sleep</code>/<code>__wakeup</code> (The before times)</h3>
         <pre><code class="php font--18" data-trim data-noescape data-line-numbers>
@@ -191,6 +198,7 @@
           </div>
         </div>
       </section>
+      -->
       <section>
         <h3><code>__serialize</code>/<code>__unserialize</code> (PHP 7.4)</h3>
         <pre><code class="php font--18" data-trim data-noescape data-line-numbers>
@@ -376,7 +384,8 @@
         <h2>Conclusions</h2>
         <p><code>var_export()</code> is faster than <code>require()</code>
           <div class="fragment">by a very slim margin</div>
-          <div class="fragment">under very specific conditions.</div>
+          <div class="fragment">under very specific conditions</div>
+          <div class="fragment">and requires a lot more work.</div>
         </p>
         <br />
         <p class="fragment">Exporting objects to code is almost never worth it. <code>unserialize()</code> is very fast.</p>
