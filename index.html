@@ -341,7 +341,6 @@
           <ul>
             <li>Unclear memory issues above 500 recursion</li>
             <li>Opcache should make require() fast</li>
-            <li></li>
           </ul>
         </aside>
       </section>
@@ -402,6 +401,147 @@
     <section>
       <section>
         <h2>But what about outside systems?</h2>
+      </section>
+      <section>
+        <h2>What should you serialize?</h2>
+      </section>
+      <section>
+        <h2>Separate Logic from Data</h2>
+        <div>
+          <div style="float: left;"><img src="assets/spock.jpg" alt="Logic" style="max-height: 400px;" /></div>
+          <div style="float: right;"><img src="assets/data.jpg" alt="Data"  style="max-height: 400px;" /></div>
+        </div>
+      </section>
+      <section>
+        <h2>Separate logic from data</h2>
+        <ul>
+          <li class="fragment">If it's in your DI Container, thou shalt not serialize it</li>
+          <li class="fragment">If it references something in the container, thou shalt not serialize</li>
+          <li class="fragment">Value objects: +1</li>
+          <li class="fragment">Entities: Only in data mapper</li>
+          <li class="fragment">Just say <em>No</em> to Active Record</li>
+          <li class="fragment">Applies to all serialization formats</li>
+        </ul>
+        <aside class="notes">
+          <ul>
+            <li>All alternatives suck, involve globals</li>
+            <li>Applies to serialize()/var_export(), too.</li>
+          </ul>
+        </aside>
+      </section>
+    </section>
+    <section>
+      <section>
+        <h2>Story time</h2>
+        <p><img src="assets/typo3.svg" alt="TYPO3" style="width: 400px"></p>
+        <aside class="notes">
+          <ul>
+            <li>In 2021, worked at TYPO3</li>
+            <li>Turn massive config array into objects</li>
+            <li>Needed to change structure on import</li>
+          </ul>
+        </aside>
+      </section>
+      <section>
+        <h2>Requirements</h2>
+        <ul>
+          <li class="fragment">Mutate data on import</li>
+          <li class="fragment">Dynamic type maps</li>
+          <li class="fragment">Fast</li>
+        </ul>
+        <p class="fragment"><q>Don't solve a problem, build a tool to solve the problem, then use it.</q></p>
+        <aside class="notes">
+          <ul>
+            <li>Type maps = Nested object that could be different types</li>
+            <li>Sounds like a special case of serialization!</li>
+          </ul>
+        </aside>
+      </section>
+      <section>
+        <h2>So, Symfony Serializer?</h2>
+        <ul>
+          <li class="fragment" style="list-style-type: '+'">Widely used</li>
+          <li class="fragment" style="list-style-type: '+'">Very flexible</li>
+          <li class="fragment" style="list-style-type: '-'">Couldn't collect/flatten</li>
+          <li class="fragment" style="list-style-type: '-'">Only static type maps ("class discriminators")</li>
+          <li class="fragment" style="list-style-type: '-'">Complex architecture, hard to modify</li>
+        </ul>
+        <p class="fragment">Sigh.  Time to write one...</p>
+        <aside class="notes">
+          <ul>
+            <li>2 weeks trying to make it work</li>
+            <li>Became clear it couldn't do what I wanted</li>
+          </ul>
+        </aside>
+      </section>
+    </section>
+    <section>
+      <section>
+        <h2>Simple hydration</h2>
+        <h2 class="fragment"><a href="https://github.com/Crell/EnvMapper">EnvMapper</a></h2>
+      </section>
+      <section>
+        <h2>The core logic (1)</h2>
+         <pre><code class="php font--16" data-trim data-noescape data-line-numbers>
+          class EnvMapper {
+              public function map(string $class, bool $require = false, ?array $source = null): object {
+                  $source ??= $_ENV;
+                  $rClass = new \ReflectionClass($class);
+                  $rProperties = $rClass->getProperties();
+
+                  $toSet = [];
+                  foreach ($rProperties as $rProp) {
+                      $propName = $rProp->getName();
+                      $envName = $this->normalizeName($propName);
+                      if (isset($source[$envName])) {
+                          $toSet[$propName]
+                            = $this->typeNormalize($source[$envName], $rProp);
+                      } elseif (ParamValue::None !== $default = $this->getDefaultValue($rProp)) {
+                          $toSet[$propName] = $default;
+                      } elseif ($require) {
+                          throw MissingEnvValue::create($propName, $class);
+                      }
+                  }
+
+                  // ...
+              }
+           }
+        </code></pre>
+      </section>
+      <section>
+        <h2>The core logic (2)</h2>
+         <pre><code class="php font--16" data-trim data-noescape data-line-numbers>
+          class EnvMapper {
+              public function map(string $class, bool $require = false, ?array $source = null): object {
+                  // ...
+
+                  $populator = function (array $props) {
+                      foreach ($props as $k => $v) {
+                          try {
+                              $this->$k = $v;
+                          } catch (\TypeError $e) {
+                              throw TypeMismatch::create($this::class, $k, $v);
+                          }
+                      }
+                  };
+
+                  $env = $rClass->newInstanceWithoutConstructor();
+
+                  $populator->call($env, $toSet);
+
+                  return $env;
+              }
+           }
+        </code></pre>
+      </section>
+      <section>
+        <h2>What does this show?</h2>
+        <ul>
+          <li class="fragment">Deserialization is driven by class definition</li>
+          <li class="fragment">Type info & defaults driven by class definition</li>
+          <li class="fragment">Busting scope is easy <span class="fragment">(please don't)</span></li>
+        </ul>
+        <p class="fragment oversize">These will be important</p>
       </section>
     </section>
 
