@@ -338,7 +338,7 @@
                       if (isset($source[$envName])) {
                           $toSet[$propName]
                             = $this->typeNormalize($source[$envName], $rProp);
-                      } elseif (ParamValue::None !== $default = $this->getDefaultValue($rProp)) {
+                      } elseif (PropValue::None !== $default = $this->getDefaultValue($rProp)) {
                           $toSet[$propName] = $default;
                       } elseif ($require) {
                           throw MissingEnvValue::create($propName, $class);
