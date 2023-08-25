@@ -95,343 +95,6 @@
     </section>
     <section>
       <section>
-        <h2>Plethora of Potential PHP Processes</h2>
-        <ul>
-          <li class="fragment"><code>__sleep</code>/<code>__wakeup</code> (The before times)</li>
-          <li class="fragment"><code>Serializable</code> (PHP 5.1, Deprecated in 8.1)</li>
-          <li class="fragment"><code>__serialize</code>/<code>__unserialize</code> (PHP 7.4)</li>
-          <li class="fragment"><code>var_export()</code>/<code>__set_state()</code></li>
-        </ul>
-      </section>
-      <!--
-      <section>
-        <h3><code>__sleep</code>/<code>__wakeup</code> (The before times)</h3>
-        <pre><code class="php font--18" data-trim data-noescape data-line-numbers>
-          class User {
-              protected int $id;
-              protected string $name;
-              protected DateTime $lastLogin;
-
-              // ...
-
-              public function __sleep() {
-                  return ['id', 'name'];
-              }
-
-              public function __wakeup() {
-                  $this->lastLogin = UserSystem::getLastLogin($this->id);
-              }
-          }
-        </code></pre>
-        <pre><code class="php font--18" data-trim data-noescape data-line-numbers>
-          $s = serialize(new User());
-          print_r($s);
-
-          // O:4:"User":2:{s:5:"*id";i:42;s:7:"*name";s:5:"Larry";}
-        </code></pre>
-      </section>
-      <section>
-        <h3><code>__sleep</code>/<code>__wakeup</code></h3>
-        <div class="layout-col">
-          <div>
-            <h3>Done well</h3>
-            <ul>
-              <li class="fragment">Inheritance works properly</li>
-              <li class="fragment">Object references retained</li>
-              <li class="fragment">Let's the serializer engine do the hard work</li>
-            </ul>
-          </div>
-          <div>
-            <h3 class="fragment">Problems</h3>
-            <ul>
-              <li class="fragment">Can only serialize existing properties</li>
-              <li class="fragment">Cannot control deserialization</li>
-            </ul>
-          </div>
-        </div>
-      </section>
-      <section>
-        <h3><code>Serializable</code> (PHP 5.1)</h3>
-        <pre><code class="php font--18" data-trim data-noescape data-line-numbers>
-          class User implements Serializable {
-              protected int $id;
-              protected string $name;
-              protected DateTime $lastLogin;
-
-              public function serialize(): string {
-                  return serialize(['id' => $this->id, 'name' => $this->name]);
-              }
-
-              public function unserialize($serialized): void {
-                  $data = unserialize($serialized);
-                  $this->id = $data['id'];
-                  $this->name = $data['name'];
-                  $this->lastLogin = UserSystem::getLastLogin($this->id);
-              }
-          }
-        </code></pre>
-        <pre><code class="php font--18" data-trim data-noescape data-line-numbers>
-          $s = serialize(new User());
-          print_r($s);
-
-          // C:4:"User":43:{a:2:{s:2:"id";i:42;s:4:"name";s:5:"Larry";}}
-        </code></pre>
-      </section>
-      <section>
-        <div class="layout-col">
-          <div>
-            <h3>Done well</h3>
-            <ul>
-              <li class="fragment">More flexibility in representation</li>
-            </ul>
-          </div>
-          <div>
-            <h3 class="fragment">Problems</h3>
-            <ul>
-              <li class="fragment">Breaks on circular references</li>
-              <li class="fragment">Breaks on inheritance (sometimes)</li>
-              <li class="fragment">Opaque serialized value</li>
-              <li class="fragment">No guarantee serialized format is <code>serialize()</code>-ish</li>
-              <li class="fragment">Breaks up the serializer, no optimizations</li>
-              <li class="fragment">...Deprecated in 8.1</li>
-            </ul>
-          </div>
-        </div>
-      </section>
-      -->
-      <section>
-        <h3><code>__serialize</code>/<code>__unserialize</code> (PHP 7.4)</h3>
-        <pre><code class="php font--18" data-trim data-noescape data-line-numbers>
-          class User {
-              protected int $id;
-              protected string $name;
-              protected DateTime $lastLogin;
-
-              // ...
-
-              public function __serialize(): array {
-                  return ['id' => $this->id, 'name' => $this->name];
-              }
-
-              public function __unserialize(array $data): void {
-                  $this->id = $data['id'];
-                  $this->name = $data['name'];
-                  $this->lastLogin = UserSystem::getLastLogin($this->id);
-              }
-          }
-        </code></pre>
-        <pre><code class="php font--18" data-trim data-noescape data-line-numbers>
-          $s = serialize(new User());
-          print_r($s);
-
-          // O:4:"User":2:{s:2:"id";i:42;s:4:"name";s:5:"Larry";}
-        </code></pre>
-      </section>
-      <section>
-        <h3><code>__serialize</code>/<code>__unserialize</code></h3>
-        <div>
-          <h3>Done well</h3>
-          <ul>
-            <li class="fragment">Inheritance works</li>
-            <li class="fragment">Object references retained</li>
-            <li class="fragment">Full flexibility for what is serialized</li>
-            <li class="fragment">Lets the serializer engine do the hard work</li>
-            <li class="fragment">Backward compatible</li>
-            <li class="fragment">Identical format to <code>__sleep()</code></li>
-            <li class="fragment">Essentially a built-in "normalizer" operation</li>
-          </ul>
-        </div>
-        <div>
-          <h3 class="fragment">Problems</h3>
-          <ul>
-            <li class="fragment">Serialized format is PHP-only, not human-editable.</li>
-          </ul>
-        </div>
-        <aside class="notes">
-          <ul>
-            <li>BC because methods ignored on older PHP versions</li>
-          </ul>
-        </aside>
-      </section>
-      <section>
-        <h3><code>var_export()</code>/<code>__set_state()</code> (PHP 4.2)</h3>
-        <pre><code class="php font--16" data-trim data-noescape data-line-numbers>
-          class User {
-              protected int $id;
-              protected string $name;
-              protected DateTime $lastLogin;
-
-              public static function __set_state(array $data): self {
-                  $new = new self();
-                  $new->id = $data['id'];
-                  $new->name = $data['name'];
-                  $new->lastLogin = UserSystem::getLastLogin($this->id);
-                  return $new;
-              }
-          }
-        </code></pre>
-        <pre><code class="php font--16" data-trim data-noescape data-line-numbers>
-          $s = var_export(new User(), true);
-          file_put_contents('export.php', "&lt;?php return $s;");
-
-          $u = require('export.php');
-        </code></pre>
-        <pre class="fragment"><code class="php font--16" data-trim data-noescape data-line-numbers>
-          &lt;?php return User::__set_state(array(
-             'id' => 5,
-             'name' => 'Crell',
-             'lastLogin' =>
-            DateTime::__set_state(array(
-               'date' => '2023-08-22 21:26:52.441708',
-               'timezone_type' => 3,
-               'timezone' => 'Europe/Amsterdam',
-            )),
-          ))
-        </code></pre>
-      </section>
-      <section>
-        <h3><code>var_export()</code>/<code>__set_state()</code></h3>
-        <div class="layout-col">
-          <div>
-            <h3>Done well</h3>
-            <ul>
-              <li class="fragment">Produces executable code</li>
-              <li class="fragment">Works for all variable types</li>
-              <li class="fragment">Opcache-friendly (for non-objects)</li>
-              <li class="fragment">Great for compiled lookkup table arrays.</li>
-            </ul>
-          </div>
-          <div>
-            <h3 class="fragment">Problems</h3>
-            <ul>
-              <li class="fragment">Can only control the deserialization side</li>
-              <li class="fragment">Deserialization requires custom user-space code</li>
-              <li class="fragment">Objects are all opt-in (need <code>__set_state()</code>)</li>
-            </ul>
-          </div>
-        </div>
-      </section>
-    </section>
-    <section>
-      <section>
-        <h2>Which is better?</h2>
-        <p class="fragment oversize">Quick, to the benchmark mobile!</p>
-        <aside class="notes">
-          <ul>
-            <li>Expected var_export() to be fastest, if more work.</li>
-            <li>Trust, but verify!</li>
-          </ul>
-        </aside>
-      </section>
-      <section>
-        <h2>Test setup</h2>
-        <ul>
-          <li class="fragment">Comparing <code>serialize()</code> to <code>var_export()</code></li>
-          <li class="fragment">Object with 4 properties: Leaf, sequential list, associative list, recursive object</li>
-          <li class="fragment">Scale list size to 20,000.  Scale recursion level to 500</li>
-        </ul>
-        <div class="fragment">
-          <h2>Predictions</h2>
-          <ul>
-            <li class="fragment"><code>require()</code>ing > <code>unserialize()</code></li>
-            <li class="fragment">Custom <code>__unserialize()</code> will be slower</li>
-          </ul>
-        </div>
-        <aside class="notes">
-          <ul>
-            <li>Unclear memory issues above 500 recursion</li>
-            <li>Opcache should make require() fast</li>
-          </ul>
-        </aside>
-      </section>
-      <section>
-        <h2>The results</h2>
-        <p><img src="assets/strange-planet-science.png" style="height: 600px" alt="I produced a detailed tribute to my wrongness.  That is science." /></p>
-        <p><cite>&mdash;<a href="https://www.nathanwpyle.art/">Nathan Pyle</a></cite></p>
-        <p>cf: <a href="https://peakd.com/hive-168588/@crell/benchmarking-serialization">Benchmarking Serialization</a></p>
-      </section>
-      <section>
-        <h2>CLI Tests</h2>
-        <p><img src="assets/benchmark-results-cli.png" alt="Results showing require() being vastly slower than anything else"></p>
-        <p class="fragment">No Opcache in CLI!</p>
-        <aside class="notes">
-          <ul>
-            <li>Duh, no opcache</li>
-            <li>var_export() is slower than serialize()</li>
-            <li>A custom __unserialize() function makes it... faster???</li>
-          </ul>
-        </aside>
-      </section>
-      <section>
-        <h2>Apache Bench tests</h2>
-        <p><img src="assets/benchmark-results-web-concurrency-1.png" alt="require() has a big jump in runtime around 4500 entries"></p>
-        <p class="fragment">Opcache max file size!</p>
-        <aside class="notes">
-          <ul>
-            <li>Why does the runtime go... down?</li>
-            <li>What is unserialize() doing ~7000 objects?</li>
-            <li>I have no idea...</li>
-          </ul>
-        </aside>
-      </section>
-      <section>
-        <h2>Zoom in on the left</h2>
-        <p><img src="assets/benchmark-results-web-zoomed.png" alt="var_export() is faster at low cardinality"></p>
-        <p class="fragment"><code>var_export()</code> wins! ...By 1.25 ms over 4000 objects</p>
-      </section>
-      <section>
-        <h2>Conclusions</h2>
-        <p><code>var_export()</code> is faster than <code>require()</code>
-          <div class="fragment">by a very slim margin</div>
-          <div class="fragment">under very specific conditions</div>
-          <div class="fragment">and requires a lot more work.</div>
-        </p>
-        <br />
-        <p class="fragment">Exporting objects to code is almost never worth it. <code>unserialize()</code> is very fast.</p>
-        <aside class="notes">
-          <ul>
-            <li>1.25 ms over 4000 objects</li>
-            <li>Beware of opcache size</li>
-            <li>Lots of extra work for very little gain</li>
-            <li>var_export() still OK for arrays, just not objects</li>
-          </ul>
-        </aside>
-      </section>
-    </section>
-    <section>
-      <section>
-        <h2>But what about outside systems?</h2>
-      </section>
-      <section>
-        <h2>What should you serialize?</h2>
-      </section>
-      <section>
-        <h2>Separate Logic from Data</h2>
-        <div>
-          <div style="float: left;"><img src="assets/spock.jpg" alt="Logic" style="max-height: 400px;" /></div>
-          <div style="float: right;"><img src="assets/data.jpg" alt="Data"  style="max-height: 400px;" /></div>
-        </div>
-      </section>
-      <section>
-        <h2>Separate logic from data</h2>
-        <ul>
-          <li class="fragment">If it's in your DI Container, thou shalt not serialize it</li>
-          <li class="fragment">If it references something in the container, thou shalt not serialize</li>
-          <li class="fragment">Value objects: +1</li>
-          <li class="fragment">Entities: Only in data mapper</li>
-          <li class="fragment">Just say <em>No</em> to Active Record</li>
-          <li class="fragment">Applies to all serialization formats</li>
-        </ul>
-        <aside class="notes">
-          <ul>
-            <li>All alternatives suck, involve globals</li>
-            <li>Applies to serialize()/var_export(), too.</li>
-          </ul>
-        </aside>
-      </section>
-    </section>
-    <section>
-      <section>
         <h2>Story time</h2>
         <p><img src="assets/typo3.svg" alt="TYPO3" style="width: 400px"></p>
         <aside class="notes">
@@ -473,6 +136,176 @@
           <ul>
             <li>2 weeks trying to make it work</li>
             <li>Became clear it couldn't do what I wanted</li>
+            <li>This is how I got interested in serialization</li>
+          </ul>
+        </aside>
+      </section>
+    </section>
+    <section>
+      <section>
+        <h2>Plethora of Potential PHP Processes</h2>
+        <ul>
+          <li class="fragment"><code>__sleep</code>/<code>__wakeup</code> (The before times)</li>
+          <li class="fragment"><code>Serializable</code> (PHP 5.1, Deprecated in 8.1)</li>
+          <li class="fragment"><code>__serialize</code>/<code>__unserialize</code> (PHP 7.4)</li>
+          <li class="fragment"><code>var_export()</code>/<code>__set_state()</code></li>
+          <li class="fragment"><code>JsonSerializable</code> (<code>__serialize()</code> only, for <code>json_encode()</code>)</li>
+          <li class="fragment">Roll your own...</li>
+        </ul>
+      </section>
+      <section>
+        <h3><code>__serialize</code>/<code>__unserialize</code> (PHP 7.4)</h3>
+        <pre><code class="php font--18" data-trim data-noescape data-line-numbers>
+          class User {
+              protected int $id;
+              protected string $name;
+              protected DateTime $lastLogin;
+
+              // ...
+
+              public function __serialize(): array {
+                  return ['id' => $this->id, 'name' => $this->name];
+              }
+
+              public function __unserialize(array $data): void {
+                  $this->id = $data['id'];
+                  $this->name = $data['name'];
+                  $this->lastLogin = UserSystem::getLastLogin($this->id);
+              }
+          }
+        </code></pre>
+        <pre><code class="php font--18" data-trim data-noescape data-line-numbers>
+          $s = serialize(new User());
+          print_r($s);
+
+          // O:4:"User":2:{s:2:"id";i:42;s:4:"name";s:5:"Larry";}
+        </code></pre>
+        <aside class="notes">
+          <ul>
+            <li>Note: Handling is intrinsic to the class.</li>
+          </ul>
+        </aside>
+      </section>
+      <section>
+        <h3><code>var_export()</code>/<code>__set_state()</code> (PHP 4.2)</h3>
+        <pre><code class="php font--16" data-trim data-noescape data-line-numbers>
+          class User {
+              protected int $id;
+              protected string $name;
+              protected DateTime $lastLogin;
+
+              public static function __set_state(array $data): self {
+                  $new = new self();
+                  $new->id = $data['id'];
+                  $new->name = $data['name'];
+                  $new->lastLogin = UserSystem::getLastLogin($this->id);
+                  return $new;
+              }
+          }
+        </code></pre>
+        <pre><code class="php font--16" data-trim data-noescape data-line-numbers>
+          $s = var_export(new User(), true);
+          file_put_contents('export.php', "&lt;?php return $s;");
+
+          $u = require('export.php');
+        </code></pre>
+        <pre><code class="php font--16" data-trim data-noescape data-line-numbers>
+          &lt;?php return User::__set_state(array(
+             'id' => 5,
+             'name' => 'Crell',
+             'lastLogin' =>
+            DateTime::__set_state(array(
+               'date' => '2023-08-22 21:26:52.441708',
+               'timezone_type' => 3,
+               'timezone' => 'Europe/Amsterdam',
+            )),
+          ))
+        </code></pre>
+        <aside class="notes">
+          <ul>
+            <li>Can only control the deserialization side</li>
+            <li>Deserialization requires custom user-space code</li>
+            <li>Objects are all opt-in (need <code>__set_state()</code>)</li>
+            <li>Doesn't actually work on DateTime!</li>
+            <li>Fine for arrays, but worth it for objects?</li>
+          </ul>
+        </aside>
+      </section>
+      <section>
+        <h2>Which is better?</h2>
+        <div class="fragment oversize">
+          <p>Quick, to the benchmark mobile!</p>
+          <p>cf: <a href="https://peakd.com/hive-168588/@crell/benchmarking-serialization">Benchmarking Serialization</a></p>
+        </div>
+        <aside class="notes">
+          <ul>
+            <li>Expected __set_state() to be fastest, if more work.</li>
+            <li>Trust, but verify!</li>
+          </ul>
+        </aside>
+      </section>
+      <section>
+        <h2><code>unserialize()</code> vs <code>__set_state()</code></h2>
+        <p><img src="assets/benchmark-results-web-zoomed.png" alt="__set_state() is faster at low cardinality"></p>
+        <p class="fragment"><code>__set_state()</code> wins! ...By 1.25 ms over 4000 objects</p>
+        <aside class="notes">
+          <ul>
+            <li>Around 5000 items, hit opcache file limit, then it was horrible.</li>
+          </ul>
+        </aside>
+      </section>
+      <section>
+        <h2>Conclusions</h2>
+        <div><code>__set_state()</code> is faster than <code>unserialize()</code>
+          <div class="fragment">by a very slim margin</div>
+          <div class="fragment">under very specific conditions</div>
+          <div class="fragment">and requires a lot more work.</div>
+        </div>
+        <br />
+        <p class="fragment">Exporting objects to code is almost never worth it. <code>unserialize()</code> is very fast.</p>
+        <aside class="notes">
+          <ul>
+            <li>1.25 ms over 4000 objects</li>
+            <li>Beware of opcache size</li>
+            <li>Lots of extra work for very little gain</li>
+            <li>var_export() still OK for arrays, just not objects</li>
+          </ul>
+        </aside>
+      </section>
+    </section>
+    <section>
+      <section>
+        <h2>But what about outside systems?</h2>
+        <aside class="notes">
+          <ul>
+            <li>JSON, YAML, XML, TOML, etc.</li>
+            <li>Gotta roll your own</li>
+            <li>What makes for good serialization hygene?</li>
+          </ul>
+        </aside>
+      </section>
+      <section>
+        <h2>Separate Logic from Data</h2>
+        <div>
+          <div style="float: left;"><img src="assets/spock.jpg" alt="Logic" style="max-height: 400px;" /></div>
+          <div style="float: right;"><img src="assets/data.jpg" alt="Data"  style="max-height: 400px;" /></div>
+        </div>
+      </section>
+      <section>
+        <h2>Separate logic from data</h2>
+        <ul>
+          <li class="fragment">If it's in your DI Container, thou shalt not serialize it</li>
+          <li class="fragment">If it references something in the container, thou shalt not serialize</li>
+          <li class="fragment">Value objects: +1</li>
+          <li class="fragment">Entities: Only in data mapper</li>
+          <li class="fragment">Just say <em>No</em> to Active Record</li>
+          <li class="fragment">Applies to all serialization formats</li>
+        </ul>
+        <p class="fragment">These are all good practices anyway.</p>
+        <aside class="notes">
+          <ul>
+            <li>All alternatives suck, involve globals</li>
+            <li>Applies to serialize()/var_export(), too.</li>
           </ul>
         </aside>
       </section>
@@ -481,10 +314,17 @@
       <section>
         <h2>Simple hydration</h2>
         <h2 class="fragment"><a href="https://github.com/Crell/EnvMapper">EnvMapper</a></h2>
+        <aside class="notes">
+          <ul>
+            <li>Many of these on GitHub</li>
+            <li>Built this afterward</li>
+            <li>Just to show concept</li>
+          </ul>
+        </aside>
       </section>
       <section>
         <h2>The core logic (1)</h2>
-         <pre><code class="php font--16" data-trim data-noescape data-line-numbers>
+        <pre><code class="php font--16" data-trim data-noescape data-line-numbers>
           class EnvMapper {
               public function map(string $class, bool $require = false, ?array $source = null): object {
                   $source ??= $_ENV;
@@ -512,7 +352,7 @@
       </section>
       <section>
         <h2>The core logic (2)</h2>
-         <pre><code class="php font--16" data-trim data-noescape data-line-numbers>
+        <pre><code class="php font--16" data-trim data-noescape data-line-numbers>
           class EnvMapper {
               public function map(string $class, bool $require = false, ?array $source = null): object {
                   // ...
