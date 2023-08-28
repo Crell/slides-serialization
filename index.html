@@ -388,6 +388,190 @@
         <p class="fragment oversize">These will be important</p>
       </section>
     </section>
+    <section>
+      <section>
+        <h2>Roll your own</h2>
+        <div class="fragment">
+          <p class="oversize">Stand on the shoulders of giants</p>
+          <img src="assets/rust-logo.svg" alt="I studied the Rust Serde crate">
+        </div>
+
+        <aside class="notes">
+          <ul>
+            <li>Studied Rust Serde crate</li>
+            <li>Almost universally loved, so worth cribbing</li>
+            <li>End result takes inspiration, but is not a direct port</li>
+          </ul>
+        </aside>
+      </section>
+      <section>
+        <h2>Three libraries</h2>
+        <ul>
+          <li><a href="http://github.com/Crell/fp">Crell/fp</a></li>
+          <li><a href="http://github.com/Crell/AttributeUtils">Crell/AttributeUtils</a></li>
+          <li><a href="http://github.com/Crell/Serde">Crell/Serde</a></li>
+        </ul>
+        <aside class="notes">
+          <ul>
+            <li>Won't talk about fp</li>
+            <li>Only talk briefly about AttributeUtils</li>
+            <li>Will talk mostly about Serde</li>
+            <li>All built to assume PHP 8.1, started work in the betas</li>
+          </ul>
+        </aside>
+      </section>
+    </section>
+    <section>
+      <section>
+        <h3>Attributes overview</h3>
+        <pre><code class="php font--20" data-trim data-noescape data-line-numbers>
+          #[GreedyLoad(type: 'all')]
+          class Product
+          {
+              #[Positive, NonZero]
+              protected int $id;
+
+              #[Permission(perm: new Pemission('read'), type: Perms::Basic]
+              public function refillStock(int $quantity): bool
+              {
+                  // ...
+              }
+          }
+        </code></pre>
+        <aside class="notes">
+          <ul>
+            <li>No intrinsic meaning; only available in Reflection</li>
+            <li>Attributes are strings or classes</li>
+            <li>Basically a constructor call. Named args recommended.</li>
+            <li>Prop values can be objects and enums</li>
+          </ul>
+        </aside>
+      </section>
+      <section>
+        <h2>Limitations</h2>
+        <ul>
+          <li class="fragment">Reflection API is clumsy</li>
+          <li class="fragment">No access to the structure the attribute was on</li>
+          <li class="fragment">No inheritance</li>
+          <li class="fragment">No way to group related attributes</li>
+          <li class="fragment">No built-in default handling</li>
+          <li class="fragment">Attributes cannot be contextual</li>
+        </ul>
+        <p class="fragment oversize">AttributeUtils addresses all of those</p>
+      </section>
+      <section>
+        <pre><code class="php font--16" data-trim data-noescape data-line-numbers>
+          #[\Attribute(\Attribute::TARGET_CLASS)]
+          class Data implements FromReflectionClass, ParseProperties {
+              public readonly string $name;
+              public readonly array $properties;
+
+              public function fromReflection(\ReflectionClass $subject): void {
+                  $this->name ??= $subject->getShortName();
+              }
+
+              public function propertyAttribute(): string { return MyProperty::class; }
+              public function includePropertiesByDefault(): bool { return true; }
+              public function setProperties(array $props): void { $this->properties = $props; }
+          }
+
+          #[\Attribute(\Attribute::TARGET_PROPERTY)]
+          class MyProperty
+          {
+              public function __construct(
+                  public readonly string $column = '',
+              ) {}
+          }
+        </code></pre>
+        <pre><code class="php font--16" data-trim data-noescape data-line-numbers>
+          #[Data]
+          class Record {
+              #[MyProperty(column: 'beep')]
+              protected property $foo;
+
+              private property $bar;
+          }
+          $dataAttrib = $analyzer->analyze(Record::class, Data::class);
+        </code></pre>
+        <aside class="notes">
+          <ul>
+            <li>Read "analyze Record with respect to Data"</li>
+            <li>All interface-driven opt-in</li>
+            <li>Save off bits of reflection if you want</li>
+            <li>$dataAttrib is an instance of Data, with a 2 element array of MyProperty</li>
+            <li>Note: Public readonly props.  Optional, recommended.</li>
+            <li>Similar Parse* interfaces for other parts of a class</li>
+            <li>Similar FromReflection* for other parts of a class</li>
+          </ul>
+        </aside>
+      </section>
+      <section>
+        <h3>Inheritance is opt-in</h3>
+        <pre><code class="php font--20" data-trim data-noescape data-line-numbers>
+          #[\Attribute(\Attribute::TARGET_CLASS)]
+          class Person implements Inheritable
+          {
+              public function __construct(public string $name = '') {}
+          }
+
+          #[Person(name: 'Jorge')]
+          class A {}
+
+          class B extends A {}
+
+          $attrib = $analyzer->analyze(B::class, Person::class);
+
+          print $attrib->name . PHP_EOL; // prints Jorge
+        </code></pre>
+        <p class="fragment oversize">Analyzer does <code>instanceof</code>,<br />so child attributes work, too</p>
+      </section>
+      <section>
+        <pre><code class="php font--16" data-trim data-noescape data-line-numbers>
+          #[\Attribute(\Attribute::TARGET_CLASS)]
+          class MainAttrib implements HasSubAttributes {
+              public readonly int $age;
+
+              public function __construct(public readonly string name = 'none') {}
+
+              public function subAttributes(): array {
+                  return [Age::class => 'fromAge'];
+              }
+
+              public function fromAge(?Age $sub): void {
+                  $this->age = $sub?->age ?? 0;
+              }
+          }
+
+          #[\Attribute(\Attribute::TARGET_CLASS)]
+          class Age {
+              public function __construct(public readonly int $age = 0) {}
+          }
+        </code></pre>
+        <pre><code class="php font--16" data-trim data-noescape data-line-numbers>
+          #[MainAttrib(name: 'Larry'), Age(21)]
+          class A {}
+
+          class B {}
+
+          $attribA = $analyzer->analyze(A::class, MainAttrib::class);
+          print "$attribA->name, $attribA->age\n"; // prints "Larry, 21"
+
+          $attribB = $analyzer->analyze(B::class, MainAttrib::class);
+          print "$attribB->name, $attribB->age\n"; // prints "none, 0"
+        </code></pre>
+        <aside class="notes">
+          <ul>
+            <li>Sub-attribute "absorbed" into main attribute</li>
+            <li>Save the whole attribute or not, your choice</li>
+            <li>Static analysis tools are wrong about readonly outside constructor</li>
+          </ul>
+        </aside>
+      </section>
+      <section>
+        <p class="oversize">Almost all of Crell/Serde is driven by Attributes,<br />via AttributeUtils</p>
+        <p class="oversize">Use it in your project today</p>
+      </section>
+    </section>
 
     <div style="display: none">
       * What is serialization?
