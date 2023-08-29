@@ -119,6 +119,7 @@
           <ul>
             <li>Type maps = Nested object that could be different types</li>
             <li>Sounds like a special case of serialization!</li>
+            <li>This is how I got interested in serialization</li>
           </ul>
         </aside>
       </section>
@@ -136,7 +137,6 @@
           <ul>
             <li>2 weeks trying to make it work</li>
             <li>Became clear it couldn't do what I wanted</li>
-            <li>This is how I got interested in serialization</li>
           </ul>
         </aside>
       </section>
@@ -572,6 +572,481 @@
         <p class="oversize">Use it in your project today</p>
       </section>
     </section>
+    <section>
+      <section>
+        <h2>Serde</h2>
+        <pre><code class="php font--18" data-trim data-noescape data-line-numbers>
+        use Crell\Serde\SerdeCommon;
+
+        $serde = new SerdeCommon();
+
+        $object = new SomeClass('a', 'b', new OtherClass());
+
+        $json = $serde->serialize($object, format: 'json');
+
+        $obj = $serde->deserialize($json, from: 'json', to: SomeClass::class);
+        </code></pre>
+      </section>
+      <section>
+        <h3>Architecture</h3>
+        <ul>
+          <li class="fragment">Stream-based (no IR)</li>
+          <li class="fragment">Can build IR per-format</li>
+          <li class="fragment">Almost entirely Attribute-driven</li>
+          <li class="fragment">Importers / Exporters</li>
+          <li class="fragment">Deformatters / Formatters</li>
+          <li class="fragment">Recursive all the way down</li>
+        </ul>
+        <aside class="notes">
+          <ul>
+            <li>Importer/Deformatter interact directly to avoid IR</li>
+            <li>Exporter/Formatter interact directly</li>
+            <li>Importer/Exporter and Formatter/Deformatter can be same object if you want, or not.</li>
+          </ul>
+        </aside>
+      </section>
+      <section>
+        Put a diagram here of some kind
+      </section>
+      <section>
+        <h2>Attributes</h2>
+        <pre><code class="php font--18" data-trim data-noescape data-line-numbers>
+          use Crell\Serde\Attributes\Field;
+          use Crell\Serde\Renaming\Cases;
+          use Crell\Serde\Renaming\Prefix;
+
+          class Person
+          {
+              #[Field(serializedName: 'callme')]
+              public string $firstName = 'Larry';
+
+              #[Field(renameWith: Cases::CamelCase)]
+              public string $lastName = 'Garfield';
+
+              #[Field(renameWith: new Prefix('online_')]
+              public string $alias = 'Crell';
+          }
+        </code></pre>
+        <pre><code class="json font--18" data-trim data-noescape data-line-numbers>
+          {
+            "callme": "Larry",
+            "LastName": "Garfield",
+            "online_alias": "Crell"
+          }
+        </code></pre>
+        <ul>
+          <li class="fragment"><code>#[Field]</code> controls behavior of a property</li>
+          <li class="fragment">Can rename to a literal or via rules</li>
+          <li class="fragment"><code>Cases</code> enum implements interface</li>
+        </ul>
+      </section>
+      <section>
+        <h2>Cool PHP trick #1</h2>
+        <h3>Enums as default objects</h3>
+        <pre><code class="php font--18" data-trim data-noescape data-line-numbers>
+          interface RenamingStrategy {
+              public function convert(string $name): string;
+          }
+
+          enum Cases implements RenamingStrategy {
+              case UPPERCASE;
+              case lowercase;
+              case snake_case;
+              case kebab_case;
+              case CamelCase;
+              case lowerCamelCase;
+
+              public function convert(string $name): string {
+                  return match ($this) {
+                      self::UPPERCASE => strtoupper($name),
+                      self::lowercase => strtolower($name),
+                      self::snake_case =>  // ...,
+                      self::kebab_case => // ...,
+                      self::CamelCase => // ...,
+                      self::lowerCamelCase => // ...,
+                  };
+              }
+        </code></pre>
+      </section>
+      <section>
+        <h3>Default handling</h3>
+        <pre><code class="php font--18" data-trim data-noescape data-line-numbers>
+          class Person
+          {
+              #[Field(default: 'Hidden')]
+              public string $location;
+
+              #[Field[(useDefault: false)]
+              public int $age;
+
+              #[Field(requireValue: true)]
+              public string $job;
+
+              public function __construct(
+                  public string $name = 'Anonymous',
+              ) {}
+          }
+        </code></pre>
+        <ul class="fragment">
+          <li><code>location</code> -> "Hidden"</li>
+          <li><code>name</code> -> "Anonymous"</li>
+          <li><code>age</code> -> uninitialized</li>
+          <li><code>job</code> -> Exception</li>
+        </ul>
+      </section>
+      <section>
+        <h2>Flatten/collect</h2>
+        <pre><code class="php font--16" data-trim data-noescape data-line-numbers>
+          class Results {
+            public function __construct(
+              #[Serde\Field(flatten: true)]
+              public Pagination $pagination,
+              #[Serde\SequenceField(arrayType: Product::class)]
+              public array $products,
+            ) {}
+          }
+
+          class Pagination {
+            public function __construct(public int $total, public int $offset, public int $limit) {}
+          }
+
+          class Product {
+            public function __construct(public string $name, public float $price) {}
+          }
+        </code></pre>
+        <pre><code class="json font--16" data-trim data-noescape data-line-numbers>
+          {
+              "total": 100,
+              "offset": 20,
+              "limit": 10,
+              "products": [
+                  { "name": "Widget", "price": 9.99 },
+                  { "name": "Gadget", "price": 4.99 }
+              ]
+          }
+        </code></pre>
+        <aside class="notes">
+          <ul>
+            <li>Structure in PHP different from JSON</li>
+            <li>Pagination object gets "flattened", properties inlined</li>
+            <li>Symmetrical. "Collect" on deserialize.</li>
+            <li>Rust Serde can do this</li>
+          </ul>
+        </aside>
+      </section>
+      <section>
+        <h2>Advanced flattening</h2>
+        <pre><code class="php font--16" data-trim data-noescape data-line-numbers>
+        class DetailedResults {
+            public function __construct(
+                #[Serde\Field(flatten: true)]
+                public NestedPagination $pagination,
+                #[Serde\Field(flatten: true)]
+                public ProductType $type,
+                #[Serde\SequenceField(arrayType: Product::class)]
+                public array $products,
+                #[Serde\Field(flatten: true)]
+                public array $other = [],
+            ) {}
+        }
+
+        class NestedPagination {
+            public function __construct(
+                public int $total,
+                public int $limit,
+                #[Serde\Field(flatten: true)]
+                public PaginationState $state,
+            ) {}
+        }
+        </code></pre>
+        <pre><code class="php font--16" data-trim data-noescape data-line-numbers>
+        class PaginationState {
+            public function __construct(public int $offset) {}
+        }
+
+        class ProductType {
+            public function __construct(public string $name = '', public string $category = '') {}
+        }
+        </code></pre>
+        <aside class="notes">
+          <ul>
+            <li>Two flattened properties</li>
+            <li>Extra "stuff" flattened/collected from array property</li>
+            <li>Nested objects can flatten recursively</li>
+          </ul>
+        </aside>
+      </section>
+      <section>
+        <h3>Advanced flattening</h3>
+        <pre><code class="json font--16" data-trim data-noescape data-line-numbers>
+          {
+            "total": 100,
+            "limit": 10,
+            "offset": 20,
+            "products": [
+                {
+                    "name": "Widget",
+                    "price": 9.99
+                },
+                {
+                    "name": "Gadget",
+                    "price": 4.99
+                }
+            ],
+            "foo": "beep",
+            "bar": "boop"
+        }
+        </code></pre>
+      </section>
+      <section>
+        <h2>Sequences vs Dictionaries</h2>
+        <pre><code class="php font--16" data-trim data-noescape data-line-numbers>
+          class Order {
+              public string $orderId;
+
+              public int $userId;
+
+              #[Field(serializedName: 'items')]
+              #[SequenceField(arrayType: Product::class)]
+              public array $products;
+
+              #[DictionaryField(arrayType: Tag::class, keyType: KeyType::String)]
+              public array $tags;
+          }
+        </code></pre>
+        <pre><code class="json font--16" data-trim data-noescape data-line-numbers>
+          {
+              "orderId": "abc123",
+              "userId": 5,
+              "items": [
+                  { "name": "Widget", "price": 9.99 },
+                  { "name": "Gadget", "price": 4.99 }
+              ],
+              "tags": {
+                "userClass": {"name": "VIP"},
+                "discount": {"name": "Closeout"}
+              }
+          }
+        </code></pre>
+        <aside class="notes">
+          <ul>
+            <li>"Arrays" are PHP's original sin</li>
+            <li>SequenceField/DictionaryField are sub-attributes</li>
+            <li>KeyType is enum</li>
+            <li>arrayType required for array-of-objects</li>
+          </ul>
+        </aside>
+      </section>
+      <section>
+        <h2>Implosion</h2>
+        <pre><code class="php font--16" data-trim data-noescape data-line-numbers>
+          class Order {
+              #[SequenceField(implodeOn: ',')]
+              protected array $productIds = [5, 6, 7];
+
+              #[DictionaryField(implodeOn: ',', joinOn: '=')]
+              protected array $dimensions = [
+                  'height' => 40,
+                  'width' => 20,
+              ];
+          }
+        </code></pre>
+        <pre><code class="json font--16" data-trim data-noescape data-line-numbers>
+          {
+              "productIds": "5,6,7",
+              "dimensions": "height=40,width=20"
+          }
+        </code></pre>
+        <aside class="notes">
+          <ul>
+            <li>Fully round-trips!</li>
+            <li>Auto-trims whitespace, can opt out</li>
+          </ul>
+        </aside>
+      </section>
+      <section>
+        <h2>Type Maps</h2>
+        <pre><code class="php font--16" data-trim data-noescape data-line-numbers>
+          interface Product {}
+
+          interface Book extends Product {}
+
+          class PaperBook implements Book {
+              protected string $title;
+              protected int $pages;
+          }
+
+          class DigitalBook implements Book {
+              protected string $title;
+              protected int $bytes;
+          }
+
+          class Sale {
+              protected Book $book;
+              protected float $discountRate;
+          }
+
+          class Order {
+              protected string $orderId;
+
+              #[SequenceField(arrayType: Book::class)]
+              protected array $products;
+          }
+        </code></pre>
+        <aside class="notes">
+          <ul>
+            <li>How do we know what type of Book to deserialize to?</li>
+          </ul>
+        </aside>
+      </section>
+      <section>
+        <h2>Type Maps</h2>
+        <pre><code class="php font--16" data-trim data-noescape data-line-numbers>
+          class Sale {
+              #[ClassNameTypeMap(key: 'type')]
+              protected Book $book;
+
+              protected float $discountRate;
+          }
+        </code></pre>
+        <pre><code class="json font--16" data-trim data-noescape data-line-numbers>
+          {
+              "book": {
+                  "type": "Your\\App\\DigitalBook",
+                  "title": "Thinking Functionally in PHP",
+                  "bytes": 45000
+              },
+              "discountRate": 0.2
+          }
+        </code></pre>
+      </section>
+      <section>
+        <h2>Type Maps</h2>
+        <pre><code class="php font--16" data-trim data-noescape data-line-numbers>
+          class Sale {
+              #[StaticTypeMap(key: 'type', map: [
+                  'paper' => Book::class,
+                  'ebook' => DigitalBook::class,
+              ])]
+              protected Book $book;
+
+              protected float $discountRate;
+          }
+        </code></pre>
+        <pre class="fragment"><code class="php font--16" data-trim data-noescape data-line-numbers>
+          #[StaticTypeMap(key: 'type', map: [
+              'paper' => Book::class,
+              'ebook' => DigitalBook::class,
+          ])]
+          interface Book {}
+        </code></pre>
+        <pre><code class="json font--16" data-trim data-noescape data-line-numbers>
+          {
+              "book": {
+                  "type": "ebook",
+                  "title": "Thinking Functionally in PHP",
+                  "bytes": 45000
+              },
+              "discountRate": 0.2
+          }
+        </code></pre>
+      </section>
+      <section>
+        <h2>Dynamic Type Maps</h2>
+        <pre><code class="php font--16" data-trim data-noescape data-line-numbers>
+          class ProductTypeMap implements TypeMap {
+              public function __construct(protected readonly Connection $db) {}
+
+              public function keyField(): string {
+                  return 'type';
+              }
+
+              public function findClass(string $id): ?string {
+                  return $this->db->someLookup($id);
+              }
+
+              public function findIdentifier(string $class): ?string {
+                  return $this->db->someMappingLogic($class);
+              }
+          }
+
+          $typeMap = new ProductTypeMap($dbConnection);
+
+          $serde = new SerdeCommon(typeMaps: [
+              Your\App\Product::class => $typeMap,
+          ]);
+
+          $json = $serde->serialize($aBook, to: 'json');
+        </code></pre>
+        <aside class="notes">
+          <ul>
+            <li>Base map on user configuration</li>
+            <li>Symfony Serializer could not do this</li>
+            <li>Unclear if even Rust Serde can do this</li>
+          </ul>
+        </aside>
+      </section>
+      <section>
+        <h2>Streaming</h2>
+        <ul>
+          <li class="fragment">Can stream to JSON or CSV</li>
+          <li class="fragment"><code>\Traversable</code> objects treated as any other object</li>
+          <li class="fragment"><code>iterable</code> will get "run out" when serializing</li>
+          <li class="fragment">Result: Lazy create and lazy stream at once!</li>
+        </ul>
+      </section>
+      <section>
+        <h2>Streaming</h2>
+        <pre><code class="php font--18" data-trim data-noescape data-line-numbers>
+          // The JsonStreamFormatter is not included by default.
+          $s = new SerdeCommon(formatters: [new JsonStreamFormatter()]);
+
+          // You may use any PHP supported stream here, including files,
+          // network sockets, stdout, an in-memory temp stream, etc.
+          $init = new FormatterStream(fopen('/tmp/output.json', 'wb'));
+
+          $result = $serde->serialize($data, format: 'json-stream', init: $init);
+
+          $fp = $result->stream;
+          // Now do with $fp as you wish.
+        </code></pre>
+      </section>
+      <section>
+        <h2>Streaming</h2>
+        <pre><code class="php font--16" data-trim data-noescape data-line-numbers>
+          class ProductList {
+              public function __construct(
+                  #[SequenceField(arrayType: Product::class)]
+                  private iterable $products,
+              ) {}
+          }
+
+          class Product { /* */ }
+          $db = ...;
+
+          $callback = function() use ($db) {
+              $result = $db->query("SELECT name, color, price FROM products ORDER BY name");
+
+              foreach ($result as $record) {
+                  yield new Product(...$record);
+              }
+          };
+        </code></pre>
+        <pre><code class="php font--16" data-trim data-noescape data-line-numbers>
+          // This is a lazy list of products, which will be pulled from the database.
+          $products = new ProductList($callback());
+
+          $s = new SerdeCommon(formatters: [new CsvStreamFormatter()]);
+
+          // Write to stdout, aka, back to the browser.
+          $init = new FormatterStream(fopen('php://output', 'wb'));
+          $result = $serde->serialize($products, format: 'csv-stream', init: $init);
+        </code></pre>
+      </section>
+      <section>
+        Do I bother with scopes?  That's 10 minutes all on its own.
+      </section>
+    </section>
 
     <div style="display: none">
       * What is serialization?
@@ -668,12 +1143,21 @@
 <script src="plugin/notes/notes.js"></script>
 <script src="plugin/markdown/markdown.js"></script>
 <script src="plugin/highlight/highlight.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js-mermaid-plugin@2.0.0/plugin/mermaid/mermaid.js"></script>
+
 <script>
   // More info about initialization & config:
   // - https://revealjs.com/initialization/
   // - https://revealjs.com/config/
   Reveal.initialize({
     hash: true,
+
+    // mermaid initialize config
+    mermaid: {
+       flowchart: {
+         curve: 'linear',
+       },
+    },
 
     // Learn about plugins: https://revealjs.com/plugins/
     plugins: [ RevealMarkdown, RevealHighlight, RevealNotes ]
