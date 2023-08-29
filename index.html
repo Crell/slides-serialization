@@ -381,11 +381,52 @@
         <ul>
           <li class="fragment">Deserialization is driven by class definition</li>
           <li class="fragment">Type info & defaults driven by class definition</li>
-          <li class="fragment">Reflection is surprisingly fast</li>
-          <li class="fragment">Enums as error codes!</li>
-          <li class="fragment">Busting scope is easy <span class="fragment">(please don't)</span></li>
+          <li class="fragment">Reflection is pretty fast, but not free</li>
         </ul>
         <p class="fragment oversize">These will be important</p>
+      </section>
+      <section>
+        <h2>Cool PHP trick #1</h2>
+        <h3>Visibility busting</h3>
+        <pre><code class="php font--18" data-trim data-noescape data-line-numbers>
+           $reader = (fn (string $prop) => $this->$prop ?? null)->bindTo($obj, $obj);
+
+          $value = $reader('privateProp');
+        </code></pre>
+        <pre><code class="php font--18" data-trim data-noescape data-line-numbers>
+          $populator = function (array $props) {
+              foreach ($props as $k => $v) {
+                  $this->$k = $v;
+              }
+          };
+
+          $env = $rClass->newInstanceWithoutConstructor();
+
+          $populator->call($obj, $toSet);
+        </code></pre>
+        <p class="fragment">(Please don't do this)</p>
+      </section>
+      <section>
+        <h2>Cool PHP trick #2</h2>
+        <h3>Enum as error code</h3>
+        <pre><code class="php font--18" data-trim data-noescape data-line-numbers>
+          enum PropValue {
+              case None;
+          }
+
+          // This specific case is mixed, but usually union types are better.
+          function getDefaultValue(\ReflectionProperty $subject): string|PropValue
+          {
+              $params = $this->getPropertiesForClass($subject->getDeclaringClass());
+
+              $param = $params[$subject->getName()] ?? null;
+
+              return $param?->isDefaultValueAvailable()
+                  ? $param->getDefaultValue()
+                  : PropValue::None;
+          }
+        </code></pre>
+        <p class="fragment">cf: <a href="https://peakd.com/hive-168588/@crell/much-ado-about-null">Much Ado about Null</a></p>
       </section>
     </section>
     <section>
@@ -395,7 +436,6 @@
           <p class="oversize">Stand on the shoulders of giants</p>
           <img src="assets/rust-logo.svg" alt="I studied the Rust Serde crate">
         </div>
-
         <aside class="notes">
           <ul>
             <li>Studied Rust Serde crate</li>
@@ -641,7 +681,7 @@
         </ul>
       </section>
       <section>
-        <h2>Cool PHP trick #1</h2>
+        <h2>Cool PHP trick #3</h2>
         <h3>Enums as default objects</h3>
         <pre><code class="php font--18" data-trim data-noescape data-line-numbers>
           interface RenamingStrategy {
