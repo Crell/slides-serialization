@@ -64,20 +64,6 @@
       </section>
       <section>
         <aside class="quote">
-          <blockquote>A publication in any medium issued in successive parts
-            bearing numerical or chronological designation and intended to be
-            continued indefinitely.</blockquote>
-          <cite><a href="https://www.dictionary.com/browse/serial">Dictionary.com</a></cite>
-        </aside>
-        <p class="oversize fragment">"Stuff put in a line"</p>
-        <aside class="notes">
-          <ul>
-            <li>Think serial bus, serial port.</li>
-          </ul>
-        </aside>
-      </section>
-      <section>
-        <aside class="quote">
           <blockquote>In computing, serialization... is the process of translating a data structure or object
             state into a format that can be <em>stored</em> (e.g. files in secondary storage devices, data buffers in
             primary storage devices) or <em>transmitted</em> (e.g. data streams over computer networks) and
@@ -155,7 +141,7 @@
       </section>
       <section>
         <h3><code>__serialize</code>/<code>__unserialize</code> (PHP 7.4)</h3>
-        <pre><code class="php font--18" data-trim data-noescape data-line-numbers>
+        <pre><code class="php font--18" data-trim data-noescape data-line-numbers="|8-10|12-16">
           class User {
               protected int $id;
               protected string $name;
@@ -177,6 +163,8 @@
         <pre><code class="php font--18" data-trim data-noescape data-line-numbers>
           $s = serialize(new User());
           print_r($s);
+
+          $u = unserialize($s);
 
           // O:4:"User":2:{s:2:"id";i:42;s:4:"name";s:5:"Larry";}
         </code></pre>
@@ -206,7 +194,6 @@
         <pre><code class="php font--16" data-trim data-noescape data-line-numbers>
           $s = var_export(new User(), true);
           file_put_contents('export.php', "&lt;?php return $s;");
-
           $u = require('export.php');
         </code></pre>
         <pre><code class="php font--16" data-trim data-noescape data-line-numbers>
@@ -324,7 +311,7 @@
       </section>
       <section>
         <h2>The core logic (1)</h2>
-        <pre><code class="php font--16" data-trim data-noescape data-line-numbers>
+        <pre><code class="php font--16" data-trim data-noescape data-line-numbers="|3|4-5|8,19|11-13|14-15">
           class EnvMapper {
               public function map(string $class, bool $require = false, ?array $source = null): object {
                   $source ??= $_ENV;
@@ -500,7 +487,7 @@
         <p class="fragment oversize">AttributeUtils addresses all of those</p>
       </section>
       <section>
-        <pre><code class="php font--16" data-trim data-noescape data-line-numbers>
+        <pre><code class="php font--16" data-trim data-noescape data-line-numbers="|2,6-8|2,10-12">
           #[\Attribute(\Attribute::TARGET_CLASS)]
           class Data implements FromReflectionClass, ParseProperties {
               public readonly string $name;
@@ -614,6 +601,9 @@
     </section>
     <section>
       <section>
+        <h2>What does Serde do?</h2>
+      </section>
+      <section>
         <h2>Serde</h2>
         <pre><code class="php font--18" data-trim data-noescape data-line-numbers>
         use Crell\Serde\SerdeCommon;
@@ -626,35 +616,16 @@
 
         $obj = $serde->deserialize($json, from: 'json', to: SomeClass::class);
         </code></pre>
-      </section>
-      <section>
-        <h3>Architecture</h3>
         <ul>
-          <li class="fragment">Stream-based (no IR)</li>
-          <li class="fragment">Can build IR per-format</li>
-          <li class="fragment">Almost entirely Attribute-driven</li>
-          <li class="fragment">Importers / Exporters</li>
-          <li class="fragment">Deformatters / Formatters</li>
-          <li class="fragment">Recursive all the way down</li>
+          <li class="fragment">JSON, YAML, array, CSV, streaming JSON, streaming CSV</li>
+          <li class="fragment">Customize per-object-type</li>
+          <li class="fragment">Customize any type</li>
+          <li class="fragment">Support any additional formats</li>
         </ul>
-        <aside class="notes">
-          <ul>
-            <li>Importer/Deformatter interact directly to avoid IR</li>
-            <li>Exporter/Formatter interact directly</li>
-            <li>Importer/Exporter and Formatter/Deformatter can be same object if you want, or not.</li>
-          </ul>
-        </aside>
       </section>
       <section>
-        Put a diagram here of some kind
-      </section>
-      <section>
-        <h2>Attributes</h2>
+        <h2>Basic usage</h2>
         <pre><code class="php font--18" data-trim data-noescape data-line-numbers>
-          use Crell\Serde\Attributes\Field;
-          use Crell\Serde\Renaming\Cases;
-          use Crell\Serde\Renaming\Prefix;
-
           class Person
           {
               #[Field(serializedName: 'callme')]
@@ -735,110 +706,6 @@
         </ul>
       </section>
       <section>
-        <h2>Flatten/collect</h2>
-        <pre><code class="php font--16" data-trim data-noescape data-line-numbers>
-          class Results {
-            public function __construct(
-              #[Serde\Field(flatten: true)]
-              public Pagination $pagination,
-              #[Serde\SequenceField(arrayType: Product::class)]
-              public array $products,
-            ) {}
-          }
-
-          class Pagination {
-            public function __construct(public int $total, public int $offset, public int $limit) {}
-          }
-
-          class Product {
-            public function __construct(public string $name, public float $price) {}
-          }
-        </code></pre>
-        <pre><code class="json font--16" data-trim data-noescape data-line-numbers>
-          {
-              "total": 100,
-              "offset": 20,
-              "limit": 10,
-              "products": [
-                  { "name": "Widget", "price": 9.99 },
-                  { "name": "Gadget", "price": 4.99 }
-              ]
-          }
-        </code></pre>
-        <aside class="notes">
-          <ul>
-            <li>Structure in PHP different from JSON</li>
-            <li>Pagination object gets "flattened", properties inlined</li>
-            <li>Symmetrical. "Collect" on deserialize.</li>
-            <li>Rust Serde can do this</li>
-          </ul>
-        </aside>
-      </section>
-      <section>
-        <h2>Advanced flattening</h2>
-        <pre><code class="php font--16" data-trim data-noescape data-line-numbers>
-        class DetailedResults {
-            public function __construct(
-                #[Serde\Field(flatten: true)]
-                public NestedPagination $pagination,
-                #[Serde\Field(flatten: true)]
-                public ProductType $type,
-                #[Serde\SequenceField(arrayType: Product::class)]
-                public array $products,
-                #[Serde\Field(flatten: true)]
-                public array $other = [],
-            ) {}
-        }
-
-        class NestedPagination {
-            public function __construct(
-                public int $total,
-                public int $limit,
-                #[Serde\Field(flatten: true)]
-                public PaginationState $state,
-            ) {}
-        }
-        </code></pre>
-        <pre><code class="php font--16" data-trim data-noescape data-line-numbers>
-        class PaginationState {
-            public function __construct(public int $offset) {}
-        }
-
-        class ProductType {
-            public function __construct(public string $name = '', public string $category = '') {}
-        }
-        </code></pre>
-        <aside class="notes">
-          <ul>
-            <li>Two flattened properties</li>
-            <li>Extra "stuff" flattened/collected from array property</li>
-            <li>Nested objects can flatten recursively</li>
-          </ul>
-        </aside>
-      </section>
-      <section>
-        <h3>Advanced flattening</h3>
-        <pre><code class="json font--16" data-trim data-noescape data-line-numbers>
-          {
-            "total": 100,
-            "limit": 10,
-            "offset": 20,
-            "products": [
-                {
-                    "name": "Widget",
-                    "price": 9.99
-                },
-                {
-                    "name": "Gadget",
-                    "price": 4.99
-                }
-            ],
-            "foo": "beep",
-            "bar": "boop"
-        }
-        </code></pre>
-      </section>
-      <section>
         <h2>Sequences vs Dictionaries</h2>
         <pre><code class="php font--16" data-trim data-noescape data-line-numbers>
           class Order {
@@ -903,6 +770,108 @@
             <li>Auto-trims whitespace, can opt out</li>
           </ul>
         </aside>
+      </section>
+      <section>
+        <h2>Flatten/collect</h2>
+        <pre><code class="php font--16" data-trim data-noescape data-line-numbers="|3-4">
+          class Results {
+            public function __construct(
+              #[Serde\Field(flatten: true)]
+              public Pagination $pagination,
+              #[Serde\SequenceField(arrayType: Product::class)]
+              public array $products,
+            ) {}
+          }
+
+          class Pagination {
+            public function __construct(public int $total, public int $offset, public int $limit) {}
+          }
+
+          class Product {
+            public function __construct(public string $name, public float $price) {}
+          }
+        </code></pre>
+        <pre><code class="json font--16" data-trim data-noescape data-line-numbers>
+          {
+              "total": 100,
+              "offset": 20,
+              "limit": 10,
+              "products": [
+                  { "name": "Widget", "price": 9.99 },
+                  { "name": "Gadget", "price": 4.99 }
+              ]
+          }
+        </code></pre>
+        <aside class="notes">
+          <ul>
+            <li>Structure in PHP different from JSON</li>
+            <li>Pagination object gets "flattened", properties inlined</li>
+            <li>Symmetrical. "Collect" on deserialize.</li>
+            <li>Rust Serde can do this</li>
+          </ul>
+        </aside>
+      </section>
+      <section>
+        <h2>Advanced flattening</h2>
+        <pre><code class="php font--16" data-trim data-noescape data-line-numbers="|3-6|17-18">
+        class DetailedResults {
+            public function __construct(
+                #[Serde\Field(flatten: true)]
+                public NestedPagination $pagination,
+                #[Serde\Field(flatten: true)]
+                public ProductType $type,
+                #[Serde\SequenceField(arrayType: Product::class)]
+                public array $products,
+                #[Serde\Field(flatten: true)]
+                public array $other = [],
+            ) {}
+        }
+        class NestedPagination {
+            public function __construct(
+                public int $total,
+                public int $limit,
+                #[Serde\Field(flatten: true)]
+                public PaginationState $state,
+            ) {}
+        }
+        </code></pre>
+        <pre><code class="php font--16" data-trim data-noescape data-line-numbers>
+        class PaginationState {
+            public function __construct(public int $offset) {}
+        }
+        class ProductType {
+            public function __construct(public string $name = '', public string $category = '') {}
+        }
+        </code></pre>
+        <aside class="notes">
+          <ul>
+            <li>Two flattened properties</li>
+            <li>Extra "stuff" flattened/collected from array property</li>
+            <li>Nested objects can flatten recursively</li>
+          </ul>
+        </aside>
+      </section>
+      <section>
+        <h3>Advanced flattening</h3>
+        <pre><code class="json font--16" data-trim data-noescape data-line-numbers>
+          {
+            "total": 100,
+            "limit": 10,
+            "offset": 20,
+            "products": [
+                {
+                    "name": "Widget",
+                    "price": 9.99
+                },
+                {
+                    "name": "Gadget",
+                    "price": 4.99
+                }
+            ],
+            "foo": "beep",
+            "bar": "boop"
+        }
+        </code></pre>
       </section>
       <section>
         <h2>Type Maps</h2>
@@ -993,7 +962,7 @@
       </section>
       <section>
         <h2>Dynamic Type Maps</h2>
-        <pre><code class="php font--16" data-trim data-noescape data-line-numbers>
+        <pre><code class="php font--16" data-trim data-noescape data-line-numbers="|8-14|17-21">
           class ProductTypeMap implements TypeMap {
               public function __construct(protected readonly Connection $db) {}
 
@@ -1087,6 +1056,192 @@
         Do I bother with scopes?  That's 10 minutes all on its own.
       </section>
     </section>
+    <section>
+      <section>
+        <h2>Inside Serde</h2>
+      </section>
+      <section>
+        <h3>Architecture</h3>
+        <ul>
+          <li class="fragment">Stream-based (no IR)</li>
+          <li class="fragment">Can build IR per-format</li>
+          <li class="fragment">Almost entirely Attribute-driven</li>
+          <li class="fragment">Importers / Exporters</li>
+          <li class="fragment">Deformatters / Formatters</li>
+          <li class="fragment">Recursive all the way down</li>
+        </ul>
+        <aside class="notes">
+          <ul>
+            <li>Importer/Deformatter interact directly to avoid IR</li>
+            <li>Exporter/Formatter interact directly</li>
+            <li>Importer/Exporter and Formatter/Deformatter can be same object if you want, or not.</li>
+          </ul>
+        </aside>
+      </section>
+      <section>
+        <h2>Setup</h2>
+        <pre><code class="php font--16" data-trim data-noescape data-line-numbers="|9-10">
+          class SerdeCommon extends Serde {
+              protected readonly array $exporters;
+              protected readonly array $importers;
+              protected readonly array $formatters;
+              protected readonly array $deformatters;
+              protected readonly TypeMapper $typeMapper;
+
+              public function __construct(
+                  protected readonly ClassAnalyzer $analyzer
+                    = new MemoryCacheAnalyzer(new Analyzer()),
+                  array $handlers = [],
+                  array $formatters = [],
+                  array $typeMaps = [],
+              ) { ... }
+          }
+        </code></pre>
+        <ul>
+          <li>Everything is readonly</li>
+          <li><code>SerdeCommon</code> is just setup; write your own!</li>
+          <li>Only non-exception class <code>extends</code> in the entire system</li>
+          <li class="fragment">Default dependencies</li>
+        </ul>
+      </section>
+      <section>
+        <h2>Cool PHP trick #4</h2>
+        <h3>Default dependencies</h3>
+        <pre><code class="php font--18" data-trim data-noescape data-line-numbers>
+          class MyService
+          {
+              public function __construct(private Other $other = new Other()) {}
+          }
+        </code></pre>
+        <ul>
+          <li class="fragment">Useful when dependency is mostly a util without its own dependencies</li>
+          <li class="fragment">Makes testing a lot easier</li>
+          <li class="fragment">Makes one-off uses easier</li>
+          <li class="fragment">For production, still DI to avoid duplication</li>
+          <li class="fragment">Default <code>NullLogger</code>?</li>
+        </ul>
+      </section>
+      <section>
+        <h2>Per-run object</h2>
+        <pre><code class="php font--16" data-trim data-noescape data-line-numbers="|7|9-15,20">
+          public function serialize(object $object, string $format,
+            mixed $init = null, array $scopes = []): mixed
+          {
+              $formatter = $this->formatters[$format]
+                ?? throw UnsupportedFormat::create($format, Direction::Serialize);
+
+              $classDef = $this->analyzer->analyze($object, ClassSettings::class, $scopes);
+
+              $inner = new Serializer(
+                  analyzer: $this->analyzer,
+                  exporters: $this->exporters,
+                  formatter: $formatter,
+                  typeMapper: $this->typeMapper,
+                  scopes: $scopes,
+              );
+
+              $rootField = $formatter->rootField($inner, $object::class);
+              $init ??= $formatter->serializeInitialize($classDef, $rootField);
+
+              $serializedValue = $inner->serialize($object, $init, $rootField);
+
+              return $formatter->serializeFinalize($serializedValue, $classDef);
+          }
+        </code></pre>
+        <aside class="notes">
+          <ul>
+            <li>No Reflection at runtime (assuming Analyzer is cached)</li>
+          </ul>
+        </aside>
+      </section>
+      <section>
+        <h2>Cool PHP trick #5</h2>
+        <h3>Internal execution objects</h3>
+        <pre><code class="php font--14" data-trim data-noescape data-line-numbers>
+          class ThingDoer {
+              public function __construct(private DepA $depA, private DepB $debB) {}
+
+              public function run(A $paramA, B $paramB) {
+                  $runner = new Runner($this->depA, $this->depB, $paramA, $paramB);
+                  return $runner->run();
+              }
+          }
+
+          class ThingRunner {
+              public function __construct(
+                public readonly DepA $depA, public readonly DepB $debB, private,
+                public readonly A $a, public readonly B $b) {}
+
+            public function run(): Result {
+              // Call a dozen internal methods that all use the constructor args.
+            }
+          }
+        </code></pre>
+        <ul>
+          <li class="fragment">Avoid passing values in each method every time</li>
+          <li class="fragment">Fully immutable, so public properties OK!</li>
+          <li class="fragment">Safe to pass <code>$this</code> around dependencies</li>
+          <li class="fragment">No need to DI every separate piece separately!</li>
+        </ul>
+      </section>
+      <section>
+        <h3>Serialization overview</h3>
+        <div class="mermaid">
+          <pre>
+            sequenceDiagram
+            participant Serde
+            participant Serializer
+            participant Exporter
+            participant Formatter
+            Serde->>Formatter: initialize()
+            Formatter-->>Serde: prepared value
+            Serde->>Serializer: Set up
+            Serde->>Serializer: serialize()
+            activate Serializer
+            loop For each property
+              Serializer->>Exporter: call depending on type
+              Exporter->>Formatter: type-specific write method
+              Formatter->>Serializer: serialize() sub-value
+            end
+            Serializer->>Formatter: finalize()
+            Serializer-->>Serde: final value
+            deactivate Serializer
+          </pre>
+        </div>
+        <aside class="notes">
+          <ul>
+            <li>Pass along <code>$runningValue</code></li>
+            <li><code>$runningValue</code> opaque to Exporter</li>
+            <li>Exporter type based on PHP type, Formatter is export type</li>
+          </ul>
+        </aside>
+      </section>
+      <section>
+        <h3>Deserialization overview</h3>
+        <div class="mermaid">
+          <pre>
+            sequenceDiagram
+            participant Serde
+            participant Deserializer
+            participant Importer
+            participant Deformatter
+            Serde->>Deformatter: initialize()
+            Deformatter-->>Serde: prepared source
+            Serde->>Deserializer: Set up
+            Serde->>Deserializer: deserialize()
+            activate Deserializer
+            loop For each property
+              Deserializer->>Importer: call depending on type
+              Importer->>Deformatter: type-specific read method
+              Deformatter->>Deserializer: deserialize() sub-value
+            end
+            Deserializer->>Deformatter: finalize()
+            Deserializer-->>Serde: final value
+            deactivate Deserializer
+          </pre>
+        </div>
+      </section>
+  </section>
 
     <div style="display: none">
       * What is serialization?
@@ -1200,7 +1355,7 @@
     },
 
     // Learn about plugins: https://revealjs.com/plugins/
-    plugins: [ RevealMarkdown, RevealHighlight, RevealNotes ]
+    plugins: [ RevealMarkdown, RevealHighlight, RevealNotes, RevealMermaid ]
   });
 </script>
 
