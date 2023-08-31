@@ -1241,7 +1241,137 @@
           </pre>
         </div>
       </section>
-  </section>
+    </section>
+    <section>
+      <section>
+        <h2>Full circle</h2>
+        <p class="fragment oversize">TYPO3 decided they liked global arrays</p>
+        <p class="fragment oversize"><a href="https://github.com/Crell/Config/">Crell/Config</a></p>
+        <aside class="notes">
+          <ul>
+            <li>TYPO3 changed their mind, so I built it myself</li>
+            <li>With most of the work in Serde and AttributeUtils, < 4 hours work</li>
+          </ul>
+        </aside>
+      </section>
+      <section>
+        <h2>Overview</h2>
+        <pre><code class="yaml font--18" data-trim data-noescape data-line-numbers>
+          # config/common/editorsettings.yaml
+          color: "#ccddee"
+          bgcolor: "#ffffff"
+        </code></pre>
+        <pre><code class="yaml font--18" data-trim data-noescape data-line-numbers>
+          # config/dev/editorsettings.yaml
+          bgcolor: '#eeff00'
+        </code></pre>
+        <pre><code class="php font--18" data-trim data-noescape data-line-numbers>
+          class EditorSettings {
+              public function __construct(
+                  public readonly string $color,
+                  public readonly string $bgcolor,
+                  public readonly int $fontSize = 14,
+              ) {}
+          }
+
+          $loader = new LayeredLoader([
+            new YamlFileSource('./config/common'),
+            new YamlFileSource('./config/' . APP_ENV),
+          ]);
+
+          $editorConfig = $loader->load(EditorSettings::class);
+        </code></pre>
+        <aside class="notes">
+          <ul>
+            <li>Names, types, defaults all driven by PHP code!</li>
+            <li>No custom schema format: PHP is the schema</li>
+            <li>Main take away today: PHP (with attributes) is the schema.</li>
+            <li>LayeredLoader auto-creates missing Serde, but accepts DI</li>
+            <li>All the power of Serde for mutating on import</li>
+          </ul>
+        </aside>
+      </section>
+      <section>
+        <h2>Custom naming</h2>
+        <pre><code class="php font--18" data-trim data-noescape data-line-numbers>
+          use Crell\Config\Config;
+
+          #[Config(key: 'editor_settings')]
+          class EditorSettings {
+              public function __construct(
+                  public readonly string $color,
+                  public readonly string $bgcolor,
+                  public readonly int $fontSize = 14,
+              ) {}
+          }
+        </code></pre>
+        <p>Now looks for <code>editor_settings.[yaml|json|php|ini]</code></p>
+        <p class="fragment">Default is <code>str_replace($class, '\', '_')</code></p>
+      </section>
+      <section>
+        <h3>Use it</h3>
+        <pre><code class="php font--18" data-trim data-noescape data-line-numbers>
+        class EditorForm {
+            public function __construct(private EditorSettings $settings) {}
+
+            public function renderForm(): string {
+                // Do stuff here.
+                $this->settings->color;
+                // ...
+            }
+        }
+        </code></pre>
+        <h3>Test it</h3>
+        <pre><code class="php font--18" data-trim data-noescape data-line-numbers>
+        class EditorFormTest extends TestCase {
+            public function test_something(): void {
+                $settings = new EditorSettings(color: '#fff', bgcolor: '#000');
+                $subject = new EditorForm($settings);
+                // Make various assertions.
+            }
+        }
+        </code></pre>
+        <h3>Dependency Inject it</h3>
+        <pre><code class="php font--18" data-trim data-noescape data-line-numbers>
+          $container->register(EditorSettings::class, fn(Container $c)
+            => $c->get(ConfigLoader::class)->load(EditorSettings::class);
+        </code></pre>
+      </section>
+    </section>
+    <section>
+      <h2>Conclusions</h2>
+      <ul>
+        <li class="fragment"><code>var_dump()</code> for code generating arrays only</li>
+        <li class="fragment"><code>serialize()</code>/<code>unserialize()</code> for internal use</li>
+        <li class="fragment">Serde for anything external</li>
+        <li class="fragment">Only ever serialize value objects / clean entities</li>
+        <li class="fragment">Attributes are awesome</li>
+        <li class="fragment"><em>PHP is the schema</em></li>
+        <li class="fragment">Holy crap modern PHP is nice!</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Resources</h2>
+      <div class="layout-col">
+        <div>
+          <h3>Libraries</h3>
+          <ul>
+            <li><a href="http://github.com/Crell/fp">Crell/fp</a></li>
+            <li><a href="http://github.com/Crell/AttributeUtils">Crell/AttributeUtils</a></li>
+            <li><a href="http://github.com/Crell/Serde">Crell/Serde</a></li>
+            <li><a href="http://github.com/Crell/EnvMapper">Crell/EnvMapper</a></li>
+            <li><a href="http://github.com/Crell/Config">Crell/Config</a></li>
+          </ul>
+        </div>
+        <div>
+          <h3>Articles</h3>
+          <ul>
+            <li><a href="https://peakd.com/hive-168588/@crell/benchmarking-serialization">Benchmarking Serialization</a></li>
+            <li><a href="https://peakd.com/hive-168588/@crell/much-ado-about-null">Much Ado about Null</a></li>
+          </ul>
+        </div>
+      </div>
+    </section>
 
     <div style="display: none">
       * What is serialization?
