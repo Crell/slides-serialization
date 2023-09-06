@@ -935,6 +935,63 @@
         </aside>
       </section>
       <section>
+        <h3>Serialization overview</h3>
+        <div class="mermaid">
+          <pre>
+            sequenceDiagram
+            participant Serde
+            participant Serializer
+            participant Exporter
+            participant Formatter
+            Serde->>Formatter: initialize()
+            Formatter-->>Serde: prepared value
+            Serde->>Serializer: Set up
+            Serde->>Serializer: serialize()
+            activate Serializer
+            loop For each property
+              Serializer->>Exporter: call depending on type
+              Exporter->>Formatter: type-specific write method
+              Formatter->>Serializer: serialize() sub-value
+            end
+            Serializer->>Formatter: finalize()
+            Serializer-->>Serde: final value
+            deactivate Serializer
+          </pre>
+        </div>
+        <aside class="notes">
+          <ul>
+            <li>Pass along <code>$runningValue</code></li>
+            <li><code>$runningValue</code> opaque to Exporter</li>
+            <li>Exporter type based on PHP type, Formatter is export type</li>
+          </ul>
+        </aside>
+      </section>
+      <section>
+        <h3>Deserialization overview</h3>
+        <div class="mermaid">
+          <pre>
+            sequenceDiagram
+            participant Serde
+            participant Deserializer
+            participant Importer
+            participant Deformatter
+            Serde->>Deformatter: initialize()
+            Deformatter-->>Serde: prepared source
+            Serde->>Deserializer: Set up
+            Serde->>Deserializer: deserialize()
+            activate Deserializer
+            loop For each property
+              Deserializer->>Importer: call depending on type
+              Importer->>Deformatter: type-specific read method
+              Deformatter->>Deserializer: deserialize() sub-value
+            end
+            Deserializer->>Deformatter: finalize()
+            Deserializer-->>Serde: final value
+            deactivate Deserializer
+          </pre>
+        </div>
+      </section>
+      <section>
         <h2>Setup</h2>
         <pre><code class="php font--16" data-trim data-noescape data-line-numbers="|9-10">
           class SerdeCommon extends Serde {
@@ -1039,63 +1096,6 @@
           <li class="fragment">Safe to pass <code>$this</code> around dependencies</li>
           <li class="fragment">No need to DI every separate piece separately!</li>
         </ul>
-      </section>
-      <section>
-        <h3>Serialization overview</h3>
-        <div class="mermaid">
-          <pre>
-            sequenceDiagram
-            participant Serde
-            participant Serializer
-            participant Exporter
-            participant Formatter
-            Serde->>Formatter: initialize()
-            Formatter-->>Serde: prepared value
-            Serde->>Serializer: Set up
-            Serde->>Serializer: serialize()
-            activate Serializer
-            loop For each property
-              Serializer->>Exporter: call depending on type
-              Exporter->>Formatter: type-specific write method
-              Formatter->>Serializer: serialize() sub-value
-            end
-            Serializer->>Formatter: finalize()
-            Serializer-->>Serde: final value
-            deactivate Serializer
-          </pre>
-        </div>
-        <aside class="notes">
-          <ul>
-            <li>Pass along <code>$runningValue</code></li>
-            <li><code>$runningValue</code> opaque to Exporter</li>
-            <li>Exporter type based on PHP type, Formatter is export type</li>
-          </ul>
-        </aside>
-      </section>
-      <section>
-        <h3>Deserialization overview</h3>
-        <div class="mermaid">
-          <pre>
-            sequenceDiagram
-            participant Serde
-            participant Deserializer
-            participant Importer
-            participant Deformatter
-            Serde->>Deformatter: initialize()
-            Deformatter-->>Serde: prepared source
-            Serde->>Deserializer: Set up
-            Serde->>Deserializer: deserialize()
-            activate Deserializer
-            loop For each property
-              Deserializer->>Importer: call depending on type
-              Importer->>Deformatter: type-specific read method
-              Deformatter->>Deserializer: deserialize() sub-value
-            end
-            Deserializer->>Deformatter: finalize()
-            Deserializer-->>Serde: final value
-            deactivate Deserializer
-          </pre>
-        </div>
       </section>
     </section>
     <section>
