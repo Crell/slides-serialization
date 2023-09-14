@@ -135,6 +135,7 @@
             <li>Note: Handling is intrinsic to the class.</li>
             <li>Uses arrays as an intermediate representation (common)</li>
             <li>Hitting a global in unserialize is bad form, don't do that</li>
+            <li>Security issue: Can unserialize to weird objects if not careful</li>
           </ul>
         </aside>
       </section>
@@ -1031,7 +1032,8 @@
             new YamlFileSource('./config/' . APP_ENV),
           ]);
 
-          $editorConfig = $loader->load(EditorSettings::class);
+          $cachedLoader = new SerializedFilesytemCache($loader, '/path/to/cache/dir');
+          $editorConfig = $cachedLoader->load(EditorSettings::class);
         </code></pre>
         <aside class="notes">
           <ul>
