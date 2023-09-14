@@ -921,50 +921,7 @@
         </aside>
       </section>
       <section>
-        <h2>Setup</h2>
-        <pre><code class="php font--16" data-trim data-noescape data-line-numbers="|9-10">
-          class SerdeCommon extends Serde {
-              protected readonly array $exporters;
-              protected readonly array $importers;
-              protected readonly array $formatters;
-              protected readonly array $deformatters;
-              protected readonly TypeMapper $typeMapper;
-
-              public function __construct(
-                  protected readonly ClassAnalyzer $analyzer
-                    = new MemoryCacheAnalyzer(new Analyzer()),
-                  array $handlers = [],
-                  array $formatters = [],
-                  array $typeMaps = [],
-              ) { ... }
-          }
-        </code></pre>
-        <ul>
-          <li>Everything is readonly</li>
-          <li><code>SerdeCommon</code> is just setup; write your own!</li>
-          <li>Only non-exception class <code>extends</code> in the entire system</li>
-          <li class="fragment">Default dependencies</li>
-        </ul>
-      </section>
-      <section>
         <h2>Cool PHP trick #4</h2>
-        <h3>Default dependencies</h3>
-        <pre><code class="php font--18" data-trim data-noescape data-line-numbers>
-          class MyService
-          {
-              public function __construct(private Other $other = new Other()) {}
-          }
-        </code></pre>
-        <ul>
-          <li class="fragment">Useful when dependency is mostly a util without its own dependencies</li>
-          <li class="fragment">Makes testing a lot easier</li>
-          <li class="fragment">Makes one-off uses easier</li>
-          <li class="fragment">For production, still DI to avoid duplication</li>
-          <li class="fragment">Default <code>NullLogger</code>?</li>
-        </ul>
-      </section>
-      <section>
-        <h2>Cool PHP trick #5</h2>
         <h3>Internal execution objects</h3>
         <pre><code class="php font--14" data-trim data-noescape data-line-numbers>
           class ThingDoer {
@@ -991,6 +948,49 @@
           <li class="fragment">Fully immutable, so public properties OK!</li>
           <li class="fragment">Safe to pass <code>$this</code> around dependencies</li>
           <li class="fragment">No need to DI every separate piece separately!</li>
+        </ul>
+      </section>
+      <section>
+        <h2>Setup</h2>
+        <pre><code class="php font--16" data-trim data-noescape data-line-numbers="|9-10">
+          class SerdeCommon extends Serde {
+              protected readonly array $exporters;
+              protected readonly array $importers;
+              protected readonly array $formatters;
+              protected readonly array $deformatters;
+              protected readonly TypeMapper $typeMapper;
+
+              public function __construct(
+                  protected readonly ClassAnalyzer $analyzer
+                    = new MemoryCacheAnalyzer(new Analyzer()),
+                  array $handlers = [],
+                  array $formatters = [],
+                  array $typeMaps = [],
+              ) { ... }
+          }
+        </code></pre>
+        <ul>
+          <li>Everything is readonly</li>
+          <li><code>SerdeCommon</code> is just setup; write your own!</li>
+          <li>Only non-exception class <code>extends</code> in the entire system</li>
+          <li class="fragment">Default dependencies</li>
+        </ul>
+      </section>
+      <section>
+        <h2>Cool PHP trick #5</h2>
+        <h3>Default dependencies</h3>
+        <pre><code class="php font--18" data-trim data-noescape data-line-numbers>
+          class MyService
+          {
+              public function __construct(private Other $other = new Other()) {}
+          }
+        </code></pre>
+        <ul>
+          <li class="fragment">Useful when dependency is mostly a util without its own dependencies</li>
+          <li class="fragment">Makes testing a lot easier</li>
+          <li class="fragment">Makes one-off uses easier</li>
+          <li class="fragment">For production, still DI to avoid duplication</li>
+          <li class="fragment">Default <code>NullLogger</code>?</li>
         </ul>
       </section>
     </section>
