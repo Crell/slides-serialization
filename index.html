@@ -88,11 +88,20 @@
           <li class="fragment"><code>__serialize</code>/<code>__unserialize</code> (PHP 7.4)</li>
           <li class="fragment"><code>var_export()</code>/<code>__set_state()</code></li>
           <li class="fragment"><code>JsonSerializable</code> (<code>__serialize()</code> only, for <code>json_encode()</code>)</li>
-          <li class="fragment">Roll your own...</li>
         </ul>
+        <div class="fragment oversize">
+          <p>Only use <code>__serialize</code>/<code>__unserialize</code>.</p>
+          <p>cf: <a href="https://peakd.com/hive-168588/@crell/benchmarking-serialization">Benchmarking Serialization</a></p>
+        </div>
+        <aside class="notes">
+          <ul>
+            <li>var_export/__set_state is a lot more work for barely measurable perf difference</li>
+            <li>JsonSerializable is not symmetric, only handles one edge case</li>
+          </ul>
+        </aside>
       </section>
       <section>
-        <h3><code>__serialize</code>/<code>__unserialize</code> (PHP 7.4)</h3>
+        <h3><code>__serialize</code>/<code>__unserialize</code></h3>
         <pre><code class="php font--18" data-trim data-noescape data-line-numbers="|8-10|12-16">
           class User {
               protected int $id;
@@ -116,110 +125,16 @@
           $s = serialize(new User());
           print_r($s);
 
-          $u = unserialize($s);
+          $u = unserialize($s, ['allowed_classes' => [User::class]]);
 
           // O:4:"User":2:{s:2:"id";i:42;s:4:"name";s:5:"Larry";}
         </code></pre>
         <aside class="notes">
           <ul>
+            <li>serialize()/unserialize() works on *any* class</li>
             <li>Note: Handling is intrinsic to the class.</li>
-          </ul>
-        </aside>
-      </section>
-      <section>
-        <h3><code>var_export()</code>/<code>__set_state()</code> (PHP 4.2)</h3>
-        <pre><code class="php font--16" data-trim data-noescape data-line-numbers>
-          class User {
-              protected int $id;
-              protected string $name;
-              protected DateTime $lastLogin;
-
-              public static function __set_state(array $data): self {
-                  $new = new self();
-                  $new->id = $data['id'];
-                  $new->name = $data['name'];
-                  $new->lastLogin = UserSystem::getLastLogin($this->id);
-                  return $new;
-              }
-          }
-        </code></pre>
-        <pre><code class="php font--16" data-trim data-noescape data-line-numbers>
-          $s = var_export(new User(), true);
-          file_put_contents('export.php', "&lt;?php return $s;");
-          $u = require('export.php');
-        </code></pre>
-        <pre><code class="php font--16" data-trim data-noescape data-line-numbers>
-          &lt;?php return User::__set_state(array(
-             'id' => 5,
-             'name' => 'Crell',
-             'lastLogin' =>
-            DateTime::__set_state(array(
-               'date' => '2023-08-22 21:26:52.441708',
-               'timezone_type' => 3,
-               'timezone' => 'Europe/Amsterdam',
-            )),
-          ))
-        </code></pre>
-        <aside class="notes">
-          <ul>
-            <li>Can only control the deserialization side</li>
-            <li>Deserialization requires custom user-space code</li>
-            <li>Objects are all opt-in (need <code>__set_state()</code>)</li>
-            <li>Doesn't actually work on DateTime!</li>
-            <li>Fine for arrays, but worth it for objects?</li>
-          </ul>
-        </aside>
-      </section>
-      <section>
-        <h2>Which is better?</h2>
-        <div class="fragment oversize">
-          <p>Quick, to the benchmark mobile!</p>
-          <p>cf: <a href="https://peakd.com/hive-168588/@crell/benchmarking-serialization">Benchmarking Serialization</a></p>
-        </div>
-        <aside class="notes">
-          <ul>
-            <li>Expected __set_state() to be fastest, if more work.</li>
-            <li>Trust, but verify!</li>
-          </ul>
-        </aside>
-      </section>
-      <section>
-        <h2><code>unserialize()</code> vs <code>__set_state()</code></h2>
-        <p><img src="assets/benchmark-results-web-zoomed.png" alt="__set_state() is faster at low cardinality"></p>
-        <p class="fragment"><code>__set_state()</code> wins! ...By 1.25 ms over 4000 objects</p>
-        <aside class="notes">
-          <ul>
-            <li>Around 5000 items, hit opcache file limit, then it was horrible.</li>
-          </ul>
-        </aside>
-      </section>
-      <section>
-        <h2>Conclusions</h2>
-        <div><code>__set_state()</code> is faster than <code>unserialize()</code>
-          <div class="fragment">by a very slim margin</div>
-          <div class="fragment">under very specific conditions</div>
-          <div class="fragment">and requires a lot more work.</div>
-        </div>
-        <br />
-        <p class="fragment">Exporting objects to code is almost never worth it. <code>unserialize()</code> is very fast.</p>
-        <aside class="notes">
-          <ul>
-            <li>1.25 ms over 4000 objects</li>
-            <li>Beware of opcache size</li>
-            <li>Lots of extra work for very little gain</li>
-            <li>var_export() still OK for arrays, just not objects</li>
-          </ul>
-        </aside>
-      </section>
-    </section>
-    <section>
-      <section>
-        <h2>But what about outside systems?</h2>
-        <aside class="notes">
-          <ul>
-            <li>JSON, YAML, XML, TOML, etc.</li>
-            <li>Gotta roll your own</li>
-            <li>What makes for good serialization hygene?</li>
+            <li>Uses arrays as an intermediate representation (common)</li>
+            <li>Hitting a global in unserialize is bad form, don't do that</li>
           </ul>
         </aside>
       </section>
@@ -243,12 +158,22 @@
         <aside class="notes">
           <ul>
             <li>All alternatives suck, involve globals</li>
-            <li>Applies to serialize()/var_export(), too.</li>
+            <li>Applies to all serialization approaches</li>
           </ul>
         </aside>
       </section>
     </section>
     <section>
+    </section>
+    <section>
+      <section>
+        <h2>But what about outside systems?</h2>
+        <ul>
+          <li>JSON, YAML, XML, TOML, etc.</li>
+          <li>PHP arrays</li>
+          <li class="fragment">Gotta roll your own</li>
+        </ul>
+      </section>
       <section>
         <h2>Story time</h2>
         <p><img src="assets/typo3.svg" alt="TYPO3" style="width: 400px"></p>
@@ -480,20 +405,19 @@
               #[Field(renameWith: Cases::CamelCase)]
               public string $lastName = 'Garfield';
 
-              #[Field(renameWith: new Prefix('online_')]
-              public string $alias = 'Crell';
-
               public string $job = 'Presenter';
 
               #[Field(alias: ['company'])]
               public string $employer = 'LegalZoom';
+
+              #[Field(exclude: true)]
+              public string $password = 'youwish';
           }
         </code></pre>
         <pre><code class="json font--16" data-trim data-noescape data-line-numbers>
           {
             "callme": "Larry",
             "LastName": "Garfield",
-            "online_alias": "Crell",
             "job": "Presenter",
             "employer": "LegalZoom"
           }
@@ -990,6 +914,11 @@
             deactivate Deserializer
           </pre>
         </div>
+        <aside class="notes">
+          <ul>
+            <li>Go fast on this one, just note the parallel</li>
+          </ul>
+        </aside>
       </section>
       <section>
         <h2>Setup</h2>
@@ -1033,39 +962,6 @@
           <li class="fragment">For production, still DI to avoid duplication</li>
           <li class="fragment">Default <code>NullLogger</code>?</li>
         </ul>
-      </section>
-      <section>
-        <h2>Per-run object</h2>
-        <pre><code class="php font--16" data-trim data-noescape data-line-numbers="|7|9-15,20">
-          public function serialize(object $object, string $format,
-            mixed $init = null, array $scopes = []): mixed
-          {
-              $formatter = $this->formatters[$format]
-                ?? throw UnsupportedFormat::create($format, Direction::Serialize);
-
-              $classDef = $this->analyzer->analyze($object, ClassSettings::class, $scopes);
-
-              $inner = new Serializer(
-                  analyzer: $this->analyzer,
-                  exporters: $this->exporters,
-                  formatter: $formatter,
-                  typeMapper: $this->typeMapper,
-                  scopes: $scopes,
-              );
-
-              $rootField = $formatter->rootField($inner, $object::class);
-              $init ??= $formatter->serializeInitialize($classDef, $rootField);
-
-              $serializedValue = $inner->serialize($object, $init, $rootField);
-
-              return $formatter->serializeFinalize($serializedValue, $classDef);
-          }
-        </code></pre>
-        <aside class="notes">
-          <ul>
-            <li>No Reflection at runtime (assuming Analyzer is cached)</li>
-          </ul>
-        </aside>
       </section>
       <section>
         <h2>Cool PHP trick #5</h2>
