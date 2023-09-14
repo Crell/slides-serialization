@@ -81,53 +81,6 @@
     </section>
     <section>
       <section>
-        <h2>Story time</h2>
-        <p><img src="assets/typo3.svg" alt="TYPO3" style="width: 400px"></p>
-        <aside class="notes">
-          <ul>
-            <li>In 2021, worked at TYPO3</li>
-            <li>Turn massive config array into objects</li>
-            <li>20+ year old config structure, never refactored for BC reasons</li>
-            <li>Needed to change structure on import</li>
-          </ul>
-        </aside>
-      </section>
-      <section>
-        <h2>Requirements</h2>
-        <ul>
-          <li class="fragment">Mutate data on import</li>
-          <li class="fragment">Dynamic type maps</li>
-          <li class="fragment">Implode/explode arrays, sometimes</li>
-          <li class="fragment">Fast</li>
-        </ul>
-        <p class="fragment"><q>Don't solve a problem, build a tool to solve the problem, then use it.</q></p>
-        <aside class="notes">
-          <ul>
-            <li>Type maps = Nested object that could be different types</li>
-            <li>Sounds like a special case of serialization!</li>
-          </ul>
-        </aside>
-      </section>
-      <section>
-        <h2>So, Symfony Serializer?</h2>
-        <ul>
-          <li class="fragment" style="list-style-type: '+'">Widely used</li>
-          <li class="fragment" style="list-style-type: '+'">Very flexible</li>
-          <li class="fragment" style="list-style-type: '-'">Couldn't collect/flatten</li>
-          <li class="fragment" style="list-style-type: '-'">Only static type maps ("class discriminators")</li>
-          <li class="fragment" style="list-style-type: '-'">Complex architecture, hard to modify</li>
-        </ul>
-        <p class="fragment">Sigh.  Time to write one...</p>
-        <aside class="notes">
-          <ul>
-            <li>2 weeks trying to make it work</li>
-            <li>Became clear it couldn't do what I wanted</li>
-          </ul>
-        </aside>
-      </section>
-    </section>
-    <section>
-      <section>
         <h2>Plethora of Potential PHP Processes</h2>
         <ul>
           <li class="fragment"><code>__sleep</code>/<code>__wakeup</code> (The before times)</li>
@@ -291,6 +244,53 @@
           <ul>
             <li>All alternatives suck, involve globals</li>
             <li>Applies to serialize()/var_export(), too.</li>
+          </ul>
+        </aside>
+      </section>
+    </section>
+    <section>
+      <section>
+        <h2>Story time</h2>
+        <p><img src="assets/typo3.svg" alt="TYPO3" style="width: 400px"></p>
+        <aside class="notes">
+          <ul>
+            <li>In 2021, worked at TYPO3</li>
+            <li>Turn massive config array into objects</li>
+            <li>20+ year old config structure, never refactored for BC reasons</li>
+            <li>Needed to change structure on import</li>
+          </ul>
+        </aside>
+      </section>
+      <section>
+        <h2>Requirements</h2>
+        <ul>
+          <li class="fragment">Mutate data on import</li>
+          <li class="fragment">Dynamic type maps</li>
+          <li class="fragment">Implode/explode arrays, sometimes</li>
+          <li class="fragment">Fast</li>
+        </ul>
+        <p class="fragment"><q>Don't solve a problem, build a tool to solve the problem, then use it.</q></p>
+        <aside class="notes">
+          <ul>
+            <li>Type maps = Nested object that could be different types</li>
+            <li>Sounds like a special case of serialization!</li>
+          </ul>
+        </aside>
+      </section>
+      <section>
+        <h2>So, Symfony Serializer?</h2>
+        <ul>
+          <li class="fragment" style="list-style-type: '+'">Widely used</li>
+          <li class="fragment" style="list-style-type: '+'">Very flexible</li>
+          <li class="fragment" style="list-style-type: '-'">Couldn't collect/flatten</li>
+          <li class="fragment" style="list-style-type: '-'">Only static type maps ("class discriminators")</li>
+          <li class="fragment" style="list-style-type: '-'">Complex architecture, hard to modify</li>
+        </ul>
+        <p class="fragment">Sigh.  Time to write one...</p>
+        <aside class="notes">
+          <ul>
+            <li>2 weeks trying to make it work</li>
+            <li>Became clear it couldn't do what I wanted</li>
           </ul>
         </aside>
       </section>
@@ -1201,7 +1201,7 @@
     <section>
       <h2>Conclusions</h2>
       <ul>
-        <li class="fragment"><code>var_dump()</code> for code generating arrays only</li>
+        <li class="fragment"><code>var_export()</code> for code generating arrays only</li>
         <li class="fragment"><code>serialize()</code>/<code>unserialize()</code> for internal use</li>
         <li class="fragment">Serde for anything external</li>
         <li class="fragment">Only ever serialize value objects / clean entities</li>
