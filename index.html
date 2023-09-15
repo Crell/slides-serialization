@@ -834,7 +834,79 @@
         </code></pre>
       </section>
       <section>
-        Do I bother with scopes?  That's 10 minutes all on its own.
+        <h2>Scopes</h2>
+        <pre><code class="php font--16" data-trim data-noescape data-line-numbers>
+          class User {
+              private string $username;
+
+              #[Field(exclude: true)]
+              private string $password;
+
+              #[Field(exclude: true)]
+              #[Field(scope: 'admin')]
+              private string $role;
+          }
+        </code></pre>
+        <pre class="fragment"><code class="php font--16" data-trim data-noescape data-line-numbers>
+          $json = $serde->serialize($user, 'json');
+          /*
+              { "username": "Larry" }
+          */
+        </code></pre>
+        <pre class="fragment"><code class="php font--16" data-trim data-noescape data-line-numbers>
+          $json = $serde->serialize($user, 'json', scopes: ['admin']);
+          /*
+              { "username": "Larry", "role": "Developer" }
+          */
+        </code></pre>
+        <aside class="notes">
+          <ul>
+            <li>Same idea as Symfony Serializer Serialization Groups</li>
+            <li>No scope -> use unscoped versions of attributes</li>
+            <li>With scope -> use scoped version of attributes if available</li>
+            <li>Works for deserialization just the same!</li>
+          </ul>
+        </aside>
+      </section>
+      <section>
+        <h2>Versioning with scopes</h2>
+        <pre><code class="php font--16" data-trim data-noescape data-line-numbers>
+          #[ClassSettings(includeFieldsByDefault: false)]
+          class Product {
+              #[Field]
+              private int $id = 5;
+
+              private int $stock = 50;
+
+              #[Field, Field(scopes: ['legacy'], serializedName: 'label')]
+              private string $name = 'Fancy widget';
+
+              #[Field(scopes: ['newsystem'])]
+              private string $price = '9.99';
+
+              #[Field(scopes: ['legacy'], serializedName: 'cost')]
+              private float $legacyPrice = 9.99;
+          }
+        </code></pre>
+        <pre class="fragment"><code class="json font--16" data-trim data-noescape data-line-numbers>
+          // No scope
+          { "id": 5, "name": "Fancy widget" }
+        </code></pre>
+        <pre class="fragment"><code class="json font--16" data-trim data-noescape data-line-numbers>
+          // "legacy" scope
+          { "id": 5, "label": "Fancy widget", "cost": 9.99, }
+        </code></pre>
+        <pre class="fragment"><code class="json font--16" data-trim data-noescape data-line-numbers>
+          // "newsystem" scope
+          { "id": 5, "label": "Fancy widget", "price": "9.99" }
+        </code></pre>
+        <aside class="notes">
+          <ul>
+            <li>Disable fields by default; must have #[Field] to be included</li>
+            <li>Same object serializes/deserializes with old names or new names</li>
+            <li>Can also invoke Serde with multiple scopes. ORed together.</li>
+          </ul>
+        </aside>
       </section>
     </section>
     <section>
