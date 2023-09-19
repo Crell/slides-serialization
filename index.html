@@ -83,6 +83,7 @@
       <section>
         <h2>Plethora of Potential PHP Processes</h2>
         <ul>
+          <li class="fragment"><code>serialize()</code>/<code>__unserialize()</code> for all values(*)</li>
           <li class="fragment"><code>__sleep</code>/<code>__wakeup</code> (The before times)</li>
           <li class="fragment"><code>Serializable</code> (PHP 5.1, Deprecated in 8.1)</li>
           <li class="fragment"><code>__serialize</code>/<code>__unserialize</code> (PHP 7.4)</li>
@@ -1103,7 +1104,7 @@
             new YamlFileSource('./config/' . APP_ENV),
           ]);
 
-          $cachedLoader = new SerializedFilesytemCache($loader, '/path/to/cache/dir');
+          $cachedLoader = new SerializedFilesytemCache($loader, '/cache/path');
           $editorConfig = $cachedLoader->load(EditorSettings::class);
         </code></pre>
         <aside class="notes">
@@ -1112,47 +1113,126 @@
             <li>No custom schema format: PHP is the schema</li>
             <li>Main take away today: PHP (with attributes) is the schema.</li>
             <li>LayeredLoader auto-creates missing Serde, but accepts DI</li>
+            <li>Caches using serialize() to disk. (Other options available.)</li>
             <li>All the power of Serde for mutating on import</li>
           </ul>
         </aside>
       </section>
       <section>
-        <h2>Custom naming</h2>
-        <pre><code class="php font--18" data-trim data-noescape data-line-numbers>
+        <h2>Advanced usage</h2>
+        <pre><code class="php font--16" data-trim data-noescape data-line-numbers="|8,14|9-13,14|7,14|1,3,4">
           use Crell\Config\Config;
 
-          #[Config(key: 'editor_settings')]
-          class EditorSettings {
+          #[Config('dashboard')]
+          readonly class DashboardSettings {
               public function __construct(
-                  public readonly string $color,
-                  public readonly string $bgcolor,
-                  public readonly int $fontSize = 14,
+                  public string $name,
+                  #[Field(flatten: true)]
+                  #[DictionaryField(arrayType: Component::class, keyType: KeyType::String)]
+                  #[StaticTypeMap(key: 'type', map: [
+                      'latest_posts' => LatestPosts::class,
+                      'user_status' => UserStatus::class,
+                      'pending' => PostsNeedModeration::class,
+                  ])]
+                  public array $components = [],
               ) {}
           }
         </code></pre>
-        <p>Now looks for <code>editor_settings.[yaml|json|php|ini]</code></p>
+        <p class="fragment">Now looks for <code>dashboard.[yaml|json|php|ini]</code></p>
         <p class="fragment">Default is <code>str_replace($class, '\', '_')</code></p>
       </section>
       <section>
-        <h3>Use it</h3>
-        <pre><code class="php font--18" data-trim data-noescape data-line-numbers>
-        class EditorForm {
-            public function __construct(private EditorSettings $settings) {}
+        <h2>Advanced usage</h2>
+        <pre><code class="php font--16" data-trim data-noescape data-line-numbers>
+          readonly class LatestPosts implements Component {
+              public function __construct(
+                  public string $category,
+                  public Side $side = Side::Left,
+              ) {}
+          }
 
-            public function renderForm(): string {
+          readonly class PostsNeedModeration implements Component {
+              public function __construct(
+                  public int $count = 5,
+                  public Side $side = Side::Left,
+              ) {}
+          }
+
+          readonly class UserStatus implements Component
+          {
+              public function __construct(
+                  public string $user,
+                  public Side $side = Side::Left,
+              ) {}
+          }
+        </code></pre>
+        <pre><code class="php font--16" data-trim data-noescape data-line-numbers>
+          enum Side: string {
+              case Left = 'left';
+              case Right = 'right';
+          }
+        </code></pre>
+      </section>
+      <section>
+        <h2>The config</h2>
+        <pre><code class="yaml font--16" data-trim data-noescape data-line-numbers>
+          # config/common/dashboard.yaml
+          name: "User dashboard"
+          me:
+              type: 'user_status'
+          movie_talk:
+              type: 'latest_posts'
+              category: movies
+          music_talk:
+              type: 'latest_posts'
+              category: music
+              side: right
+        </code></pre>
+        <pre><code class="yaml font--16" data-trim data-noescape data-line-numbers>
+          # config/admin/dashboard.yaml
+          name: "Admin dashboard"
+          mod_todo:
+              type: 'pending'
+              side: right
+        </code></pre>
+        <pre><code class="php font--16" data-trim data-noescape data-line-numbers>
+          $loaders = [
+            new YamlFileSource('./config/common'),
+            new YamlFileSource('./config/' . APP_ENV),
+          ];
+          if (user_is_admin()) $loaders[] = new YamlFileSource('./config/admin');
+          $loader = new LayeredLoader($loaders);
+
+          $dashConfig = $loader->load(DashboardSettings::class);
+        </code></pre>
+        <aside class="notes">
+          <ul>
+            <li>"name" is defined, so used directly</li>
+            <li>Everything else gets collected into $components</li>
+            <li>left/right strings get upcast to Enum values by Serde</li>
+          </ul>
+        </aside>
+      </section>
+      <section>
+        <h3>Use it</h3>
+        <pre><code class="php font--16" data-trim data-noescape data-line-numbers>
+        class Dashboard {
+            public function __construct(private DashboardSettings $settings) {}
+
+            public function renderDashboard(): string {
                 // Do stuff here.
-                $this->settings->color;
-                // ...
+                $this->settings->name;
+                foreach ($this->settings->components as $c) { ... }
             }
         }
         </code></pre>
         <div class="fragment">
           <h3>Test it</h3>
-          <pre><code class="php font--18" data-trim data-noescape data-line-numbers>
-            class EditorFormTest extends TestCase {
+          <pre><code class="php font--16" data-trim data-noescape data-line-numbers>
+            class DashboardTest extends TestCase {
                 public function test_something(): void {
-                    $settings = new EditorSettings(color: '#fff', bgcolor: '#000');
-                    $subject = new EditorForm($settings);
+                    $settings = new DashboardSettings('Test', [new UserStatus('crell')]);
+                    $subject = new Dashboard($settings);
                     // Make various assertions.
                 }
             }
@@ -1160,11 +1240,19 @@
         </div>
         <div class="fragment">
           <h3>Dependency Inject it</h3>
-          <pre><code class="php font--18" data-trim data-noescape data-line-numbers>
-            $container->register(EditorSettings::class, fn(Container $c)
-              => $c->get(ConfigLoader::class)->load(EditorSettings::class);
+          <pre><code class="php font--16" data-trim data-noescape data-line-numbers>
+            $container->register(DashboardSettings::class, fn(Container $c)
+              => $c->get(ConfigLoader::class)->load(DashboardSettings::class);
           </code></pre>
         </div>
+        <aside class="notes">
+          <ul>
+            <li>No need for a mocking library</li>
+            <li>Clean auto-wiring</li>
+            <li>Absolute type safety, default values handled, etc.</li>
+            <li>Read-only data</li>
+          </ul>
+        </aside>
       </section>
     </section>
     <section>
