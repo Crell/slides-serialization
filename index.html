@@ -634,11 +634,13 @@
       </section>
       <section>
         <h3>Advanced flattening</h3>
-        <pre><code class="json font--16" data-trim data-noescape data-line-numbers>
+        <pre><code class="json font--16" data-trim data-noescape data-line-numbers="|2-3|4|5-6|17-18">
           {
             "total": 100,
             "limit": 10,
             "offset": 20,
+            "name": "Dodads",
+            "category": "Small items",
             "products": [
                 {
                     "name": "Widget",
@@ -653,6 +655,14 @@
             "bar": "boop"
         }
         </code></pre>
+        <aside class="notes">
+          <ul>
+            <li>First set are from NestedPagination</li>
+            <li>Second set are from PaginationState</li>
+            <li>Third set are from ProductType</li>
+            <li>Fourth set are from the $other array</li>
+          </ul>
+        </aside>
       </section>
       <section>
         <h2>Type Maps</h2>
