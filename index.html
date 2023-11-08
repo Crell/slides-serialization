@@ -725,7 +725,7 @@
         <pre><code class="php font--16" data-trim data-noescape data-line-numbers>
           class Sale {
               #[StaticTypeMap(key: 'type', map: [
-                  'paper' => Book::class,
+                  'paper' => PaperBook::class,
                   'ebook' => DigitalBook::class,
               ])]
               protected Book $book;
@@ -908,7 +908,7 @@
         </code></pre>
         <pre class="fragment"><code class="json font--16" data-trim data-noescape data-line-numbers>
           // "newsystem" scope
-          { "id": 5, "label": "Fancy widget", "price": "9.99" }
+          { "id": 5, "name": "Fancy widget", "price": "9.99" }
         </code></pre>
         <aside class="notes">
           <ul>
@@ -1012,7 +1012,7 @@
               public function __construct(private DepA $depA, private DepB $debB) {}
 
               public function run(A $paramA, B $paramB) {
-                  $runner = new Runner($this->depA, $this->depB, $paramA, $paramB);
+                  $runner = new ThingRunner($this->depA, $this->depB, $paramA, $paramB);
                   return $runner->run();
               }
           }
