@@ -23,7 +23,7 @@
 <body class="skin-blue">
 <div class="reveal">
   <footer>
-    <img src="assets/lz-logo-black.svg" alt="LegalZoom" />
+    <img src="assets/makershub.svg" alt="MakersHub" />
     <span class="name">@Crell@phpc.social</span>
   </footer>
 	<div class="slides">
@@ -39,11 +39,11 @@
         <a href="http://bit.ly/php80"><img src="assets/exploring-php80.png" width="175px;" alt="Cover of Exploring PHP 8.0" /></a>
         <a href="https://bit.ly/fn-php"><img src="assets/thinking-functionally.png" width="175px;" alt="Cover of Thinking Functionally in PHP" /></a>
 
-        <ul style="text-wrap: none">
-          <li style="margin-top: 1em;">Staff Engineer for <a href="https://www.typo3.com/">LegalZoom</a></li>
+        <ul style="text-wrap: nowrap">
+          <li style="margin-top: 1em;">Principal Engineer at MakersHub</li>
           <li style="margin-top: 1em;">PHP-FIG Core Committee</li>
+          <li style="margin-top: 1em;">PHP Core Contributor</li>
           <li style="margin-top: 1em;">General purpose pedant</li>
-          <li style="margin-top: 1em;"><a href="http://bit.ly/php80"><em>Exploring PHP 8.0</em></a></li>
           <li style="margin-top: 1em;"><a href="https://bit.ly/fn-php"><em>Thinking Functionally in PHP</em></a></li>
         </ul>
       </div>
@@ -409,7 +409,7 @@
               public string $job = 'Presenter';
 
               #[Field(alias: ['company'])]
-              public string $employer = 'LegalZoom';
+              public string $employer = 'MakersHub';
 
               #[Field(exclude: true)]
               public string $password = 'youwish';
@@ -420,7 +420,7 @@
             "callme": "Larry",
             "LastName": "Garfield",
             "job": "Presenter",
-            "employer": "LegalZoom"
+            "employer": "MakersHub"
           }
         </code></pre>
         <aside class="notes">
@@ -658,7 +658,7 @@
         <aside class="notes">
           <ul>
             <li>First set are from NestedPagination</li>
-            <li>Second set are from PaginationState</li>
+            <li>Second set (offset) is from PaginationState</li>
             <li>Third set are from ProductType</li>
             <li>Fourth set are from the $other array</li>
           </ul>
