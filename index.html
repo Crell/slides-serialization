@@ -369,6 +369,12 @@
           }
         </code></pre>
         <p class="fragment">cf: <a href="https://peakd.com/hive-168588/@crell/much-ado-about-null">Much Ado about Null</a></p>
+        <aside class="notes">
+          <ul>
+            <li>Null is a legal default value, so need some other value to indicate no-value</li>
+            <li>Define own value-space for sentinel value</li>
+          </ul>
+        </aside>
       </section>
     </section>
     <section>
@@ -904,7 +910,7 @@
         </code></pre>
         <pre class="fragment"><code class="json font--16" data-trim data-noescape data-line-numbers>
           // "legacy" scope
-          { "id": 5, "label": "Fancy widget", "cost": 9.99, }
+          { "id": 5, "label": "Fancy widget", "cost": 9.99 }
         </code></pre>
         <pre class="fragment"><code class="json font--16" data-trim data-noescape data-line-numbers>
           // "newsystem" scope
